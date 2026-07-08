@@ -11,6 +11,7 @@ var HEADERS_ORDER = [
   "Apellido Materno acreditado",
   "RFC",
   "CURP",
+  "Nacionalidad",
   "País de Nacimiento",
   "Entidad Federativa de nacimiento",
   "Fecha de Nacimiento",
@@ -40,17 +41,17 @@ var HEADERS_ORDER = [
   "Nombre de tu Jefe Inmediato",
   "Antigüedad en el empleo, negocio ó jubilado ó pensionado años",
   "Nombre (solo nombre) referencia 1",
-  "Apellidos (Paterno y Materno) referencia 1",
+  "Apellido Paterno (solo nombre) referencia 1",
   "Parentesco ref 1",
   "Teléfono de la Referencia 1",
   "Ocupacion de la referencia 1",
   "Nombre (solo nombre) referencia 2",
-  "Apellidos (Paterno y Materno) referencia 2",
+  "Apellido Paterno (solo nombre) referencia 2",
   "Parentesco ref 2",
   "Teléfono de la Referencia 2",
   "Ocupacion de la referencia 2",
   "Nombre (solo nombre) referencia 3",
-  "Apellidos (Paterno y Materno) referencia 3",
+  "Apellido Paterno (solo nombre) referencia 3",
   "Parentesco ref 3",
   "Teléfono de la Referencia 3",
   "Ocupacion de la referencia 3"
@@ -84,7 +85,9 @@ function doPost(e) {
     var row = [];
     for (var i = 0; i < sheetHeaders.length; i++) {
       var headerName = sheetHeaders[i].toString().trim();
-      if (headerName === "Timestamp") {
+      var lowerHeader = headerName.toLowerCase();
+      // Detecta "Timestamp", "Marca temporal", "Marca Temporal", "fecha", etc.
+      if (lowerHeader === "timestamp" || lowerHeader === "marca temporal") {
         row.push(new Date());
       } else {
         var value = data[headerName];

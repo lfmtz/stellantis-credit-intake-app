@@ -433,7 +433,7 @@ export const stellantisFieldSchema = {
     type: "text",
     placeholder: "Ej. Rodríguez Gómez",
     phase: 4,
-    sheetHeader: "Apellidos (Paterno y Materno) referencia 1",
+    sheetHeader: "Apellido Paterno (solo nombre) referencia 1",
     validation: {
       required: true,
       minLength: 2,
@@ -497,7 +497,7 @@ export const stellantisFieldSchema = {
     type: "text",
     placeholder: "Ej. Hernández Pérez",
     phase: 4,
-    sheetHeader: "Apellidos (Paterno y Materno) referencia 2",
+    sheetHeader: "Apellido Paterno (solo nombre) referencia 2",
     validation: {
       required: true,
       minLength: 2,
@@ -561,7 +561,7 @@ export const stellantisFieldSchema = {
     type: "text",
     placeholder: "Ej. Martínez López",
     phase: 4,
-    sheetHeader: "Apellidos (Paterno y Materno) referencia 3",
+    sheetHeader: "Apellido Paterno (solo nombre) referencia 3",
     validation: {
       required: true,
       minLength: 2,
