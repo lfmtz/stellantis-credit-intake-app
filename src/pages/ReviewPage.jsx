@@ -42,11 +42,20 @@ export default function ReviewPage({
 
   return (
     <div className="review-page-container animate-fade-in">
-      <div className="review-header text-center">
-        <h1 className="welcome-title">Revisión de tu Solicitud</h1>
-        <p className="welcome-subtitle">
-          Por favor verifica con cuidado toda la información antes del envío definitivo. Puedes editar cualquier campo directamente en esta pantalla.
-        </p>
+      <div className="review-header">
+        <h1 className="welcome-title text-center">Revisión de tu Solicitud</h1>
+        
+        <div className="review-notice-banner my-5 flex items-start gap-3 p-4 rounded-xl border border-teal-accent/30 bg-teal-accent/5">
+          <AlertCircle className="text-teal-accent shrink-0 mt-0.5" size={20} />
+          <div>
+            <p className="text-sm font-semibold text-white">
+              Valida por favor que tus datos sean correctos, porque de esto depende tu autorización de crédito.
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              Puedes corregir algún dato dando clic en el lápiz (<Edit2 size={12} className="inline mx-0.5 text-teal-accent" />) de tu lado derecho.
+            </p>
+          </div>
+        </div>
       </div>
 
       {submitError && (
