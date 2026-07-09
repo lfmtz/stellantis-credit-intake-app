@@ -66,8 +66,17 @@ export default function ConversationalFormPage({
   const [welcomeTyping, setWelcomeTyping] = useState(false);
   const [welcomeStep, setWelcomeStep] = useState(0);
 
+  const [typedValue, setTypedValue] = useState("");
+
   const activeFieldKey = allFieldKeys[engineState.currentQuestionIndex];
   const activeSchema = stellantisFieldSchema[activeFieldKey];
+
+  // Sincronizar typedValue cuando cambie de pregunta
+  useEffect(() => {
+    if (activeFieldKey) {
+      setTypedValue(formData[activeFieldKey] || "");
+    }
+  }, [engineState.currentQuestionIndex, activeFieldKey]);
 
   // Secuencia de bienvenida
   useEffect(() => {
@@ -149,6 +158,7 @@ export default function ConversationalFormPage({
 
     setLocalError("");
     setErrors((prev) => ({ ...prev, [activeFieldKey]: "" }));
+    setTypedValue("");
 
     const updatedCompleted = [...engineState.completedQuestions];
     if (!updatedCompleted.includes(activeFieldKey)) {
@@ -214,6 +224,7 @@ export default function ConversationalFormPage({
 
   const handleInputChange = (value) => {
     setLocalError("");
+    setTypedValue(value);
     setFormData((prev) => ({ ...prev, [activeFieldKey]: value }));
     setEngineState((prev) => ({
       ...prev,
@@ -508,7 +519,7 @@ export default function ConversationalFormPage({
               {activeSchema.type === "select" ? (
                 <select
                   ref={inputRef}
-                  value={formData[activeFieldKey] || ""}
+                  value={typedValue}
                   onChange={(e) => handleInputChange(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="ai-select-input-field"
@@ -524,7 +535,7 @@ export default function ConversationalFormPage({
                   ref={inputRef}
                   type={activeSchema.type}
                   placeholder={activeSchema.placeholder}
-                  value={formData[activeFieldKey] || ""}
+                  value={typedValue}
                   onChange={(e) => handleInputChange(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="ai-text-input-field"

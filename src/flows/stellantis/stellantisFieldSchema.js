@@ -442,7 +442,7 @@ export const stellantisFieldSchema = {
   },
   ref1Parentesco: {
     label: "Parentesco Ref 1",
-    prompt: "¿Qué parentesco tienes con tu Referencia 1?",
+    prompt: "¿Qué parentesco tiene la Referencia 1 contigo?",
     type: "text",
     placeholder: "Ej. Hermana / Primo / Amigo",
     phase: 4,
@@ -506,7 +506,7 @@ export const stellantisFieldSchema = {
   },
   ref2Parentesco: {
     label: "Parentesco Ref 2",
-    prompt: "¿Qué relación o parentesco tienes con tu Referencia 2?",
+    prompt: "¿Qué parentesco tiene la Referencia 2 contigo?",
     type: "text",
     placeholder: "Ej. Tío / Amigo / Compañero",
     phase: 4,
@@ -570,7 +570,7 @@ export const stellantisFieldSchema = {
   },
   ref3Parentesco: {
     label: "Parentesco Ref 3",
-    prompt: "¿Qué parentesco tienes con tu Referencia 3?",
+    prompt: "¿Qué parentesco tiene la Referencia 3 contigo?",
     type: "text",
     placeholder: "Ej. Vecino / Hermana / Amigo",
     phase: 4,
