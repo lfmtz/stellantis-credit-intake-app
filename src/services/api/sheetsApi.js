@@ -3,7 +3,7 @@
  */
 
 export const submitFormToSheets = async (payload) => {
-  const url = import.meta.env.VITE_SHEETS_API_URL;
+  const url = import.meta.env.VITE_SHEETS_API_URL || "https://script.google.com/macros/s/AKfycbzHw1GgzD58evJrZJqYzAVPHOV53vH_7EBvpDlSaEoASAdlOhFMKFMsykGUFiy-RCebag/exec";
   
   if (!url) {
     console.warn("VITE_SHEETS_API_URL no está definida en las variables de entorno. Simulando envío local...");
