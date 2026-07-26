@@ -67,19 +67,16 @@ export const stellantisFormFlow = {
       fields: [
         // Referencia 1
         "ref1Nombre",
-        "ref1ApellidoPaterno",
         "ref1Parentesco",
         "ref1Telefono",
         "ref1Ocupacion",
         // Referencia 2
         "ref2Nombre",
-        "ref2ApellidoPaterno",
         "ref2Parentesco",
         "ref2Telefono",
         "ref2Ocupacion",
         // Referencia 3
         "ref3Nombre",
-        "ref3ApellidoPaterno",
         "ref3Parentesco",
         "ref3Telefono",
         "ref3Ocupacion"

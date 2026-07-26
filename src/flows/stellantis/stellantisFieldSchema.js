@@ -416,15 +416,15 @@ export const stellantisFieldSchema = {
   // FASE 4: REFERENCIAS PERSONALES
   // Referencia 1
   ref1Nombre: {
-    label: "Nombre Ref 1",
-    prompt: "Ya casi terminamos. Ahora capturemos tus tres referencias personales. Por favor, asegúrate de que sean dos familiares y una amistad. ¿Cuál es el nombre (solo nombre o nombres) de tu Referencia 1?",
+    label: "Nombre completo Ref 1",
+    prompt: "Ya casi terminamos. Ahora capturemos tus tres referencias personales. Por favor, asegúrate de que sean dos familiares y una amistad. ¿Cuál es el nombre completo (nombre y apellidos) de tu Referencia 1?",
     type: "text",
-    placeholder: "Ej. Laura",
+    placeholder: "Ej. María García López",
     phase: 4,
     sheetHeader: "Nombre (solo nombre) referencia 1",
     validation: {
       required: true,
-      message: "El nombre es obligatorio."
+      message: "El nombre completo es obligatorio."
     }
   },
   ref1ApellidoPaterno: {
@@ -435,7 +435,7 @@ export const stellantisFieldSchema = {
     phase: 4,
     sheetHeader: "Apellido Paterno (solo nombre) referencia 1",
     validation: {
-      required: true,
+      required: false,
       minLength: 2,
       message: "Los apellidos de tu referencia son requeridos."
     }
@@ -480,15 +480,15 @@ export const stellantisFieldSchema = {
 
   // Referencia 2
   ref2Nombre: {
-    label: "Nombre Ref 2",
-    prompt: "Perfecto. Vamos con tu Referencia 2. ¿Cuál es su nombre o nombres?",
+    label: "Nombre completo Ref 2",
+    prompt: "Perfecto. Vamos con tu Referencia 2. ¿Cuál es su nombre completo (nombre y apellidos)?",
     type: "text",
-    placeholder: "Ej. Oscar",
+    placeholder: "Ej. Pedro López Rodríguez",
     phase: 4,
     sheetHeader: "Nombre (solo nombre) referencia 2",
     validation: {
       required: true,
-      message: "El nombre es obligatorio."
+      message: "El nombre completo es obligatorio."
     }
   },
   ref2ApellidoPaterno: {
@@ -499,7 +499,7 @@ export const stellantisFieldSchema = {
     phase: 4,
     sheetHeader: "Apellido Paterno (solo nombre) referencia 2",
     validation: {
-      required: true,
+      required: false,
       minLength: 2,
       message: "Los apellidos de tu referencia son requeridos."
     }
@@ -544,15 +544,15 @@ export const stellantisFieldSchema = {
 
   // Referencia 3
   ref3Nombre: {
-    label: "Nombre Ref 3",
-    prompt: "Excelente. Finalmente, capturemos tu Referencia 3. ¿Cuál es su nombre o nombres?",
+    label: "Nombre completo Ref 3",
+    prompt: "Excelente. Finalmente, capturemos tu Referencia 3. ¿Cuál es su nombre completo (nombre y apellidos)?",
     type: "text",
-    placeholder: "Ej. Sofía",
+    placeholder: "Ej. Sofía Martínez López",
     phase: 4,
     sheetHeader: "Nombre (solo nombre) referencia 3",
     validation: {
       required: true,
-      message: "El nombre es obligatorio."
+      message: "El nombre completo es obligatorio."
     }
   },
   ref3ApellidoPaterno: {
@@ -563,7 +563,7 @@ export const stellantisFieldSchema = {
     phase: 4,
     sheetHeader: "Apellido Paterno (solo nombre) referencia 3",
     validation: {
-      required: true,
+      required: false,
       minLength: 2,
       message: "Los apellidos de tu referencia son requeridos."
     }
