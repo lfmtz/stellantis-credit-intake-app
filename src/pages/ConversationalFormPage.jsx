@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowRight, ArrowLeft, Send, Sparkles, AlertTriangle, CornerDownLeft, Edit2, CheckCheck } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Send, Sparkles, AlertTriangle, CornerDownLeft, Edit2, CheckCheck, Plus, FileText } from 'lucide-react';
 import { stellantisFormFlow } from '../flows/stellantis/stellantisFormFlow';
 import { stellantisFieldSchema } from '../flows/stellantis/stellantisFieldSchema';
 import { validateField } from '../utils/validators';
@@ -234,6 +234,51 @@ export default function ConversationalFormPage({
 
   // Renderizar fase inicial de bienvenida si no ha comenzado expresamente
   if (!hasStarted) {
+    const isAdminMode = new URLSearchParams(window.location.search).get('admin') === 'true';
+
+    if (isAdminMode) {
+      return (
+        <div className="welcome-container animate-fade-in max-w-2xl mx-auto text-center py-12">
+          <div className="brand-logo-container justify-center mb-6">
+            <Sparkles className="logo-spark animate-bounce-slow" />
+            <h2 className="brand-badge text-teal-accent">STELLANTIS CREDIT PANEL</h2>
+          </div>
+          
+          <h1 className="welcome-title mb-2">ADMINISTRACIÓN DE SOLICITUDES</h1>
+          <p className="welcome-subtitle text-lg text-gray-400 mb-8 font-semibold">BIENVENIDO</p>
+
+          <div className="glass-panel p-8 rounded-xl max-w-md mx-auto mb-8 bg-dark-card border border-teal-accent/20">
+            <p className="text-sm text-gray-400 mb-6">
+              Este es tu panel privado para gestionar los expedientes de clientes de Stellantis.
+            </p>
+            <div className="flex flex-col gap-4">
+              <button 
+                type="button"
+                onClick={() => {
+                  setHasStarted(true);
+                  setCurrentStep(1);
+                  setEngineState((prev) => ({
+                    ...prev,
+                    currentQuestionIndex: 0
+                  }));
+                }}
+                className="btn btn-primary w-full flex items-center justify-center gap-2 py-3"
+              >
+                <Plus size={18} /> Iniciar Nueva Solicitud
+              </button>
+              <button 
+                type="button"
+                onClick={() => setCurrentStep(-1)}
+                className="btn btn-secondary w-full flex items-center justify-center gap-2 py-3"
+              >
+                <FileText size={18} /> Ver Solicitudes Guardadas
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="welcome-container animate-fade-in max-w-2xl mx-auto">
         <div className="brand-logo-container text-center mb-6">

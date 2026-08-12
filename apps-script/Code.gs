@@ -57,6 +57,52 @@ var HEADERS_ORDER = [
   "Ocupacion de la referencia 3"
 ];
 
+function doGet(e) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("Respuestas de formulario 1");
+    if (!sheet) {
+      sheet = ss.getActiveSheet();
+    }
+    
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    
+    if (lastRow <= 1) {
+      return ContentService.createTextOutput(JSON.stringify([]))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    var dataRange = sheet.getRange(2, 1, lastRow - 1, lastCol);
+    var values = dataRange.getValues();
+    
+    var records = [];
+    for (var r = 0; r < values.length; r++) {
+      var record = {
+        rowId: r + 2 // Las filas en Sheets empiezan en 1, y la fila 1 son cabeceras, por lo que los datos empiezan en la fila 2
+      };
+      for (var c = 0; c < headers.length; c++) {
+        var headerName = headers[c].toString().trim();
+        if (headerName) {
+          record[headerName] = values[r][c];
+        }
+      }
+      records.push(record);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify(records))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: error.toString()
+    }))
+    .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
 function doPost(e) {
   try {
     // Parseo de los datos del POST
@@ -81,6 +127,34 @@ function doPost(e) {
     var headersRange = sheet.getRange(1, 1, 1, lastCol);
     var sheetHeaders = headersRange.getValues()[0];
     
+    // Si la acción es actualizar
+    if (data.action === "update" && data.rowId) {
+      var rowId = parseInt(data.rowId, 10);
+      if (rowId >= 2 && rowId <= sheet.getLastRow()) {
+        // En lugar de appendRow, actualizamos la fila existente
+        for (var i = 0; i < sheetHeaders.length; i++) {
+          var headerName = sheetHeaders[i].toString().trim();
+          var lowerHeader = headerName.toLowerCase();
+          
+          // No actualizamos el Timestamp original para mantener la fecha original de registro
+          if (lowerHeader !== "timestamp" && lowerHeader !== "marca temporal") {
+            var value = getValueFromData(data, headerName);
+            if (value !== undefined) {
+              sheet.getRange(rowId, i + 1).setValue(value);
+            }
+          }
+        }
+        
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: "Registro actualizado exitosamente"
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+      } else {
+        throw new Error("ID de fila inválido para actualización: " + rowId);
+      }
+    }
+    
     // Generar la nueva fila alineando dinámicamente con los cabeceros del Google Sheet
     var row = [];
     for (var i = 0; i < sheetHeaders.length; i++) {
@@ -90,7 +164,7 @@ function doPost(e) {
       if (lowerHeader === "timestamp" || lowerHeader === "marca temporal") {
         row.push(new Date());
       } else {
-        var value = data[headerName];
+        var value = getValueFromData(data, headerName);
         row.push(value !== undefined ? value : "");
       }
     }
@@ -112,6 +186,17 @@ function doPost(e) {
     }))
     .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+// Helper robusto para obtener valores de un objeto sin importar la normalización o diferencias de acento
+function getValueFromData(data, headerName) {
+  var normalizedHeader = headerName.toString().trim().normalize("NFC").toLowerCase();
+  for (var key in data) {
+    if (key.toString().trim().normalize("NFC").toLowerCase() === normalizedHeader) {
+      return data[key];
+    }
+  }
+  return undefined;
 }
 
 // Manejar preflight CORS de navegadores modernos

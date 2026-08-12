@@ -12,13 +12,14 @@ export const formPayloadAdapter = (formData) => {
     if (sheetHeader) {
       let val = formData[key];
       
-      // Si el valor es una fecha en formato YYYY-MM-DD (ej: 1980-07-06),
-      // lo formateamos al formato D/M/YYYY (ej: 6/7/1980) solicitado por el cliente.
-      if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}$/.test(val)) {
-        const parts = val.split("-");
+      // Si el valor es una fecha en formato YYYY-MM-DD (ej: 1980-07-06) o formato ISO (ej: 1962-04-22T06:00:00.000Z),
+      // lo formateamos al formato DD/MM/YYYY (ej: 06/07/1980) solicitado por el cliente.
+      if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+        const datePart = val.substring(0, 10);
+        const parts = datePart.split("-");
         const year = parts[0];
-        const month = parseInt(parts[1], 10);
-        const day = parseInt(parts[2], 10);
+        const month = parts[1];
+        const day = parts[2];
         val = `${day}/${month}/${year}`;
       }
       

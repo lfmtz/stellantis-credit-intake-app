@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import ConversationalFormPage from '../pages/ConversationalFormPage';
 import ReviewPage from '../pages/ReviewPage';
 import SuccessPage from '../pages/SuccessPage';
-import { submitFormToSheets } from '../services/api/sheetsApi';
+import RequestsListPage from '../pages/RequestsListPage';
+import { submitFormToSheets, updateFormInSheets } from '../services/api/sheetsApi';
 import { formPayloadAdapter } from '../services/adapters/formPayloadAdapter';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, FileText, PlusCircle } from 'lucide-react';
 
 const INITIAL_FORM_DATA = {
   // Fase 1
@@ -62,11 +63,12 @@ const INITIAL_FORM_DATA = {
 };
 
 export default function App() {
-  const [currentStep, setCurrentStep] = useState(0); // 0 = Bienvenida, 5 = Review, 6 = Éxito
+  const [currentStep, setCurrentStep] = useState(0); // -1 = Listado, 0 = Bienvenida, 5 = Review, 6 = Éxito
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [editingRowId, setEditingRowId] = useState(null);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -75,7 +77,13 @@ export default function App() {
     const sheetPayload = formPayloadAdapter(formData);
 
     try {
-      const response = await submitFormToSheets(sheetPayload);
+      let response;
+      if (editingRowId) {
+        response = await updateFormInSheets(editingRowId, sheetPayload);
+      } else {
+        response = await submitFormToSheets(sheetPayload);
+      }
+
       if (response && (response.success || response.status === 'success')) {
         setCurrentStep(6); // Success
       } else {
@@ -92,8 +100,22 @@ export default function App() {
     setFormData(INITIAL_FORM_DATA);
     setErrors({});
     setSubmitError(null);
+    setEditingRowId(null);
     setCurrentStep(0);
   };
+
+  const handleEditRequest = (rowId, adaptedData) => {
+    setFormData({
+      ...INITIAL_FORM_DATA,
+      ...adaptedData
+    });
+    setEditingRowId(rowId);
+    setErrors({});
+    setSubmitError(null);
+    setCurrentStep(5); // Ir directo a revisión para que pueda editar y confirmar de forma interactiva
+  };
+
+  const isAdminMode = new URLSearchParams(window.location.search).get('admin') === 'true';
 
   return (
     <div className="app-root-layout">
@@ -104,8 +126,36 @@ export default function App() {
             <Sparkles className="text-teal-accent" />
             <h1 className="logo-text">STELLANTIS <span className="text-gray-400">CREDIT</span></h1>
           </div>
-          <div className="nav-actions">
-            <span className="badge badge-outline">Fase 1: Stellantis</span>
+          <div className="nav-actions flex items-center gap-3">
+            {isAdminMode && (
+              <>
+                {/* Si estamos capturando/editando (pasos 1 al 5), permitimos volver al Inicio o al Listado */}
+                {currentStep > 0 && currentStep <= 5 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleReset}
+                      className="btn btn-secondary flex items-center gap-1.5 py-1 px-3 text-xs"
+                      style={{ minHeight: '32px' }}
+                    >
+                      Inicio
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(-1)}
+                      className="btn btn-secondary flex items-center gap-1.5 py-1 px-3 text-xs"
+                      style={{ minHeight: '32px' }}
+                    >
+                      <FileText size={14} className="text-teal-accent" />
+                      Ver Solicitudes
+                    </button>
+                  </>
+                )}
+              </>
+            )}
+            <span className="badge badge-outline">
+              {editingRowId ? `Editando Fila #${editingRowId}` : `Fase ${currentStep > 0 && currentStep <= 4 ? currentStep : "1"}`}
+            </span>
           </div>
         </div>
       </header>
@@ -113,6 +163,17 @@ export default function App() {
       {/* Main Content Area */}
       <main className="app-main-content">
         <div className="content-container max-w-4xl mx-auto px-4 py-8">
+          {currentStep === -1 && (
+            <RequestsListPage
+              onEditRequest={handleEditRequest}
+              onCreateNew={() => {
+                setFormData(INITIAL_FORM_DATA);
+                setEditingRowId(null);
+                setCurrentStep(0);
+              }}
+            />
+          )}
+
           {currentStep >= 0 && currentStep <= 4 && (
             <ConversationalFormPage
               currentStep={currentStep}
