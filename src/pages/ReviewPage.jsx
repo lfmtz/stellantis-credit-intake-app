@@ -4,6 +4,20 @@ import { stellantisFormFlow } from '../flows/stellantis/stellantisFormFlow';
 import { stellantisFieldSchema } from '../flows/stellantis/stellantisFieldSchema';
 import { validateField } from '../utils/validators';
 
+const formatDisplayValue = (fieldId, value) => {
+  if (!value) return "";
+  if (fieldId === "fechaNacimiento" && typeof value === "string") {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      return `${match[3]}/${match[2]}/${match[1]}`;
+    }
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value)) {
+      return value;
+    }
+  }
+  return String(value);
+};
+
 export default function ReviewPage({
   formData,
   setFormData,
@@ -18,7 +32,17 @@ export default function ReviewPage({
 
   const startEditing = (fieldId, currentVal) => {
     setEditingField(fieldId);
-    setTempValue(currentVal || '');
+    let val = currentVal || '';
+    if (fieldId === "fechaNacimiento" && typeof val === "string") {
+      const match = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (match) {
+        val = `${match[1]}-${match[2]}-${match[3]}`;
+      } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) {
+        const parts = val.split("/");
+        val = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+      }
+    }
+    setTempValue(val);
     setLocalErrors((prev) => ({ ...prev, [fieldId]: '' }));
   };
 
@@ -143,7 +167,7 @@ export default function ReviewPage({
                           </div>
                         ) : (
                           <span className="review-field-value text-white font-medium">
-                            {value ? String(value) : <em className="text-gray-500">Sin responder</em>}
+                            {value ? formatDisplayValue(fieldId, value) : <em className="text-gray-500">Sin responder</em>}
                           </span>
                         )}
                       </div>
