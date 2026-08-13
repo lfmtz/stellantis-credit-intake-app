@@ -203,3 +203,68 @@ function getValueFromData(data, headerName) {
 function doOptions(e) {
   return ContentService.createTextOutput("");
 }
+
+/**
+ * Función de una sola ejecución para normalizar todas las fechas existentes 
+ * en la columna "Fecha de Nacimiento" al formato DD/MM/YYYY.
+ * 
+ * Para ejecutarla:
+ * 1. Abre el editor de Apps Script en Google Sheets (Extensiones -> Apps Script).
+ * 2. Selecciona la función "normalizarFechasExistentes" en la barra de herramientas superior.
+ * 3. Haz clic en "Ejecutar".
+ */
+function normalizarFechasExistentes() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Respuestas de formulario 1");
+  if (!sheet) {
+    sheet = ss.getActiveSheet();
+  }
+  
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return;
+  
+  // Encontrar la columna "Fecha de Nacimiento"
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var colIndex = -1;
+  for (var i = 0; i < headers.length; i++) {
+    if (headers[i].toString().trim() === "Fecha de Nacimiento") {
+      colIndex = i + 1;
+      break;
+    }
+  }
+  
+  if (colIndex === -1) {
+    console.log("No se encontró la columna 'Fecha de Nacimiento'");
+    return;
+  }
+  
+  var range = sheet.getRange(2, colIndex, lastRow - 1, 1);
+  var values = range.getValues();
+  
+  for (var r = 0; r < values.length; r++) {
+    var val = values[r][0];
+    if (val) {
+      var dateStr = val.toString().trim();
+      
+      // Si es un objeto Date nativo en Apps Script
+      if (val instanceof Date) {
+        var day = ("0" + val.getDate()).slice(-2);
+        var month = ("0" + (val.getMonth() + 1)).slice(-2);
+        var year = val.getFullYear();
+        var formattedDate = day + "/" + month + "/" + year;
+        sheet.getRange(r + 2, colIndex).setValue(formattedDate);
+      } 
+      // Si es un string en formato ISO o YYYY-MM-DD
+      else {
+        var isoMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}):(\d{2}))?/);
+        if (isoMatch) {
+          var year = isoMatch[1];
+          var month = isoMatch[2];
+          var day = isoMatch[3];
+          var formattedDate = day + "/" + month + "/" + year;
+          sheet.getRange(r + 2, colIndex).setValue(formattedDate);
+        }
+      }
+    }
+  }
+}
