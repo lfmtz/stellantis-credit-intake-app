@@ -160,7 +160,18 @@ export default function RequestsListPage({ onEditRequest, onCreateNew }) {
                   const curp = req["CURP"] || 'N/A';
                   const email = req["Correo Electrónico"] || 'N/A';
                   const tel = req["Número Celular"] || 'N/A';
-                  const timestamp = req["Timestamp"] ? String(req["Timestamp"]).split('T')[0] : 'Sin fecha';
+                  const rawTimestamp = req["Timestamp"] || req["Marca temporal"] || req["Marca Temporal"];
+                  let timestamp = 'Sin fecha';
+                  if (rawTimestamp) {
+                    const str = String(rawTimestamp).trim();
+                    if (str.includes('T')) {
+                      timestamp = str.split('T')[0];
+                    } else if (str.includes(' ')) {
+                      timestamp = str.split(' ')[0];
+                    } else {
+                      timestamp = str;
+                    }
+                  }
                   
                   return (
                     <tr 
