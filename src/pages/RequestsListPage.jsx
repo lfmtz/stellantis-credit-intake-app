@@ -142,7 +142,8 @@ export default function RequestsListPage({ onEditRequest, onCreateNew }) {
         </div>
       ) : (
         <div className="glass-panel overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Vista de Tabla para Escritorio */}
+          <div className="overflow-x-auto hide-on-mobile">
             <table className="w-full text-left border-collapse" style={{ width: '100%' }}>
               <thead>
                 <tr className="border-b" style={{ background: 'rgba(0, 0, 0, 0.25)' }}>
@@ -220,6 +221,87 @@ export default function RequestsListPage({ onEditRequest, onCreateNew }) {
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Vista de Tarjetas para Celular */}
+          <div className="show-on-mobile p-4">
+            <div className="flex flex-col gap-4">
+              {displayedRequests.map((req, idx) => {
+                const nombreCompleto = `${req["Nombre(s) acreditado"] || ''} ${req["Apellido Paterno acreditado"] || ''} ${req["Apellido Materno acreditado"] || ''}`;
+                const rfc = req["RFC"] || 'N/A';
+                const curp = req["CURP"] || 'N/A';
+                const email = req["Correo Electrónico"] || 'N/A';
+                const tel = req["Número Celular"] || 'N/A';
+                const rawTimestamp = req["Timestamp"] || req["Marca temporal"] || req["Marca Temporal"];
+                let timestamp = 'Sin fecha';
+                if (rawTimestamp) {
+                  const str = String(rawTimestamp).trim();
+                  if (str.includes('T')) {
+                    timestamp = str.split('T')[0];
+                  } else if (str.includes(' ')) {
+                    timestamp = str.split(' ')[0];
+                  } else {
+                    timestamp = str;
+                  }
+                }
+
+                return (
+                  <div 
+                    key={req.rowId || idx} 
+                    className="glass-panel p-4 flex flex-col gap-3" 
+                    style={{ background: 'rgba(255, 255, 255, 0.02)', borderColor: 'rgba(255, 255, 255, 0.05)' }}
+                  >
+                    {/* Encabezado de Tarjeta (Fecha, Fila, Botón de Editar) */}
+                    <div className="flex justify-between items-start border-b pb-2" style={{ borderColor: 'var(--border-color)' }}>
+                      <div>
+                        <div className="flex items-center gap-1.5 text-xs text-teal-accent font-semibold">
+                          <Calendar size={12} />
+                          <span>{timestamp}</span>
+                        </div>
+                        <span className="text-xs text-gray-500 block mt-0.5">Fila #{req.rowId}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(req)}
+                        className="btn btn-secondary flex items-center gap-1 py-1 px-2.5"
+                        style={{ fontSize: '0.75rem', height: '30px' }}
+                      >
+                        <Edit2 size={10} className="text-teal-accent" />
+                        Editar
+                      </button>
+                    </div>
+
+                    {/* Acreditado */}
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-gray-500 block mb-0.5">Acreditado</span>
+                      <div className="flex items-center gap-2">
+                        <User size={13} className="text-gray-400" />
+                        <span className="font-semibold text-white text-sm">{nombreCompleto}</span>
+                      </div>
+                    </div>
+
+                    {/* Identificadores */}
+                    <div className="grid grid-cols-2 gap-2 bg-black/20 p-2.5 rounded border" style={{ borderColor: 'rgba(255, 255, 255, 0.03)' }}>
+                      <div>
+                        <span className="text-[10px] text-gray-500 block uppercase tracking-wider">RFC</span>
+                        <span className="font-mono text-xs text-gray-200">{rfc}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-gray-500 block uppercase tracking-wider">CURP</span>
+                        <span className="font-mono text-xs text-gray-200">{curp}</span>
+                      </div>
+                    </div>
+
+                    {/* Contacto */}
+                    <div className="text-xs flex flex-col gap-0.5 bg-black/10 p-2 rounded">
+                      <span className="text-[10px] text-gray-500 uppercase tracking-wider block">Contacto</span>
+                      <span className="text-gray-300 block truncate">{email}</span>
+                      <span className="text-gray-400 block mt-0.5 font-semibold">{tel}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
           <div className="p-4 border-t text-xs text-gray-500 text-right">
             {searchTerm ? (
