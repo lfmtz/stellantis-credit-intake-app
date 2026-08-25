@@ -129,6 +129,20 @@ export default function App() {
             <h1 className="logo-text">STELLANTIS <span className="text-gray-400">CREDIT</span></h1>
           </div>
           <div className="nav-actions flex items-center gap-3">
+            {adminPassword && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminPassword('');
+                  sessionStorage.removeItem('adminPassword');
+                  handleReset();
+                }}
+                className="btn btn-secondary flex items-center gap-1.5 py-1 px-3 text-xs"
+                style={{ minHeight: '32px', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#fca5a5' }}
+              >
+                Cerrar Sesión
+              </button>
+            )}
             {isAdminMode && (
               <>
                 {/* Si estamos capturando/editando (pasos 1 al 5), permitimos volver al Inicio o al Listado */}
