@@ -3,6 +3,7 @@ import ConversationalFormPage from '../pages/ConversationalFormPage';
 import ReviewPage from '../pages/ReviewPage';
 import SuccessPage from '../pages/SuccessPage';
 import RequestsListPage from '../pages/RequestsListPage';
+import AdminLogin from '../components/AdminLogin';
 import { submitFormToSheets, updateFormInSheets } from '../services/api/sheetsApi';
 import { formPayloadAdapter } from '../services/adapters/formPayloadAdapter';
 import { Sparkles, FileText, PlusCircle } from 'lucide-react';
@@ -69,6 +70,7 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [editingRowId, setEditingRowId] = useState(null);
+  const [adminPassword, setAdminPassword] = useState(() => sessionStorage.getItem('adminPassword') || '');
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -79,7 +81,7 @@ export default function App() {
     try {
       let response;
       if (editingRowId) {
-        response = await updateFormInSheets(editingRowId, sheetPayload);
+        response = await updateFormInSheets(editingRowId, sheetPayload, adminPassword);
       } else {
         response = await submitFormToSheets(sheetPayload);
       }
@@ -164,14 +166,25 @@ export default function App() {
       <main className="app-main-content">
         <div className="content-container max-w-4xl mx-auto px-4 py-8">
           {currentStep === -1 && (
-            <RequestsListPage
-              onEditRequest={handleEditRequest}
-              onCreateNew={() => {
-                setFormData(INITIAL_FORM_DATA);
-                setEditingRowId(null);
-                setCurrentStep(0);
-              }}
-            />
+            adminPassword ? (
+              <RequestsListPage
+                adminPassword={adminPassword}
+                onEditRequest={handleEditRequest}
+                onCreateNew={() => {
+                  setFormData(INITIAL_FORM_DATA);
+                  setEditingRowId(null);
+                  setCurrentStep(0);
+                }}
+              />
+            ) : (
+              <AdminLogin
+                onLoginSuccess={(pass) => {
+                  setAdminPassword(pass);
+                  sessionStorage.setItem('adminPassword', pass);
+                }}
+                onCancel={handleReset}
+              />
+            )
           )}
 
           {currentStep >= 0 && currentStep <= 4 && (

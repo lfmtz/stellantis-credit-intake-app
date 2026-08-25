@@ -98,7 +98,7 @@ export const submitFormToSheets = async (payload) => {
   }
 };
 
-export const getRequestsFromSheets = async () => {
+export const getRequestsFromSheets = async (password) => {
   const url = getApiUrl();
 
   if (!url) {
@@ -111,7 +111,8 @@ export const getRequestsFromSheets = async () => {
   }
 
   try {
-    const response = await fetch(url, {
+    const urlWithPass = password ? `${url}${url.includes('?') ? '&' : '?'}password=${encodeURIComponent(password)}` : url;
+    const response = await fetch(urlWithPass, {
       method: 'GET',
       mode: 'cors'
     });
@@ -120,20 +121,24 @@ export const getRequestsFromSheets = async () => {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    if (data && data.success === false) {
+      throw new Error(data.error || "No autorizado");
+    }
+    return data;
   } catch (error) {
     console.error("Error al obtener datos de Google Sheets:", error);
-    // Fallback a dummy data en caso de fallo de red
-    return dummyData;
+    throw error;
   }
 };
 
-export const updateFormInSheets = async (rowId, payload) => {
+export const updateFormInSheets = async (rowId, payload, password) => {
   const url = getApiUrl();
 
   const updatePayload = {
     action: "update",
     rowId: rowId,
+    password: password,
     ...payload
   };
 
@@ -169,7 +174,11 @@ export const updateFormInSheets = async (rowId, payload) => {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    if (data && data.success === false) {
+      throw new Error(data.error || "Fallo al actualizar registro");
+    }
+    return data;
   } catch (error) {
     console.error("Error al actualizar datos en Google Sheets:", error);
     throw error;

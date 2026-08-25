@@ -3,7 +3,7 @@ import { getRequestsFromSheets } from '../services/api/sheetsApi';
 import { formPayloadInverseAdapter } from '../services/adapters/formPayloadInverseAdapter';
 import { Search, Edit2, Plus, RefreshCw, AlertCircle, FileText, Calendar, User } from 'lucide-react';
 
-export default function RequestsListPage({ onEditRequest, onCreateNew }) {
+export default function RequestsListPage({ adminPassword, onEditRequest, onCreateNew }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,7 +15,7 @@ export default function RequestsListPage({ onEditRequest, onCreateNew }) {
     if (showRefreshIndicator) setIsRefreshing(true);
     setError(null);
     try {
-      const data = await getRequestsFromSheets();
+      const data = await getRequestsFromSheets(adminPassword);
       if (Array.isArray(data)) {
         setRequests(data);
       } else {

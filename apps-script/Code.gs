@@ -3,6 +3,10 @@
  * y guardarlos en una hoja de cálculo con columnas exactas.
  */
 
+// Contraseña de seguridad para acceso administrativo (lectura y edición)
+// Cambia este valor por la contraseña que tú decidas usar
+var ADMIN_PASSWORD = "stellantis2026";
+
 // Cabeceros exactos y orden esperados en la hoja de Google Sheets
 var HEADERS_ORDER = [
   "Timestamp",
@@ -59,6 +63,16 @@ var HEADERS_ORDER = [
 
 function doGet(e) {
   try {
+    // Validar contraseña
+    var password = e && e.parameter && e.parameter.password;
+    if (password !== ADMIN_PASSWORD) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: "No autorizado. Proporcione la contraseña correcta."
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+    }
+
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName("Respuestas de formulario 1");
     if (!sheet) {
@@ -129,6 +143,15 @@ function doPost(e) {
     
     // Si la acción es actualizar
     if (data.action === "update" && data.rowId) {
+      // Validar contraseña para edición
+      if (data.password !== ADMIN_PASSWORD) {
+        return ContentService.createTextOutput(JSON.stringify({
+          success: false,
+          error: "No autorizado. Proporcione la contraseña correcta."
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+      }
+
       var rowId = parseInt(data.rowId, 10);
       if (rowId >= 2 && rowId <= sheet.getLastRow()) {
         // En lugar de appendRow, actualizamos la fila existente
