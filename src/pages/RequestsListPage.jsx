@@ -8,6 +8,7 @@ export default function RequestsListPage({ onEditRequest, onCreateNew }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterDate, setFilterDate] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const fetchRequests = async (showRefreshIndicator = false) => {
@@ -43,33 +44,55 @@ export default function RequestsListPage({ onEditRequest, onCreateNew }) {
   // Invertir lista para mostrar las más recientes primero
   const reversedRequests = [...requests].reverse();
 
-  // Filtrar solicitudes por Nombre o RFC
+  // Filtrar solicitudes por Nombre, RFC y Fecha
   const filtered = reversedRequests.filter((req) => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    const nombre = `${req["Nombre(s) acreditado"] || ''} ${req["Apellido Paterno acreditado"] || ''} ${req["Apellido Materno acreditado"] || ''}`.toLowerCase();
-    const rfc = (req["RFC"] || '').toLowerCase();
-    
-    return nombre.includes(term) || rfc.includes(term);
+    let matchesSearch = true;
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const nombre = `${req["Nombre(s) acreditado"] || ''} ${req["Apellido Paterno acreditado"] || ''} ${req["Apellido Materno acreditado"] || ''}`.toLowerCase();
+      const rfc = (req["RFC"] || '').toLowerCase();
+      matchesSearch = nombre.includes(term) || rfc.includes(term);
+    }
+
+    let matchesDate = true;
+    if (filterDate) {
+      const rawTimestamp = req["Timestamp"] || req["Marca temporal"] || req["Marca Temporal"];
+      if (rawTimestamp) {
+        const str = String(rawTimestamp).trim();
+        const [selYear, selMonth, selDay] = filterDate.split('-');
+        const selDayInt = parseInt(selDay, 10).toString();
+        const selMonthInt = parseInt(selMonth, 10).toString();
+
+        const formattedSlash1 = `${selDayInt}/${selMonthInt}/${selYear}`;
+        const formattedSlash2 = `${selDay.padStart(2, '0')}/${selMonth.padStart(2, '0')}/${selYear}`;
+        const formattedDash = `${selYear}-${selMonth.padStart(2, '0')}-${selDay.padStart(2, '0')}`;
+
+        matchesDate = str.includes(formattedSlash1) || str.includes(formattedSlash2) || str.includes(formattedDash);
+      } else {
+        matchesDate = false;
+      }
+    }
+
+    return matchesSearch && matchesDate;
   });
 
-  // Mostrar solo las últimas 5 por defecto si no hay término de búsqueda
-  const displayedRequests = searchTerm ? filtered : filtered.slice(0, 5);
+  // Mostrar solo las últimas 5 por defecto si no hay término de búsqueda o filtro
+  const displayedRequests = (searchTerm || filterDate) ? filtered : filtered.slice(0, 5);
 
   return (
     <div className="requests-list-container animate-fade-in py-4">
       {/* Header de la vista */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h2 className="step-title flex items-center gap-2">
-            <FileText className="text-teal-accent" />
-            Solicitudes Capturadas
+          <h2 className="step-title flex items-center gap-2 flex-wrap">
+            <FileText className="text-teal-accent flex-shrink-0" />
+            <span>Solicitudes Capturadas</span>
           </h2>
           <p className="step-description">
             Consulta, busca y edita solicitudes registradas en Google Sheets.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full md:w-auto justify-end">
           <button 
             type="button" 
             onClick={() => fetchRequests(true)} 
@@ -91,26 +114,49 @@ export default function RequestsListPage({ onEditRequest, onCreateNew }) {
         </div>
       </div>
 
-      {/* Barra de Búsqueda */}
-      <div className="glass-panel p-4 mb-6 flex items-center gap-3">
-        <Search className="text-gray-400" size={20} />
-        <input 
-          type="text" 
-          placeholder="Buscar por nombre, RFC, CURP o correo..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="form-control"
-          style={{ flexGrow: 1, border: 'none', background: 'transparent', padding: '0.25rem 0' }}
-        />
-        {searchTerm && (
-          <button 
-            onClick={() => setSearchTerm('')} 
-            className="text-xs text-gray-400 hover:text-white"
-            style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-          >
-            Limpiar
-          </button>
-        )}
+      {/* Barra de Búsqueda y Filtros */}
+      <div className="glass-panel p-4 mb-6 flex flex-col md:flex-row items-stretch md:items-center gap-3">
+        <div className="flex items-center gap-3 flex-grow bg-black/10 rounded-lg px-3 py-2 border border-white/5" style={{ background: 'rgba(0, 0, 0, 0.15)' }}>
+          <Search className="text-gray-400" size={20} />
+          <input 
+            type="text" 
+            placeholder="Buscar por nombre o RFC..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="form-control"
+            style={{ flexGrow: 1, border: 'none', background: 'transparent', padding: '0.25rem 0', boxShadow: 'none' }}
+          />
+          {searchTerm && (
+            <button 
+              onClick={() => setSearchTerm('')} 
+              className="text-xs text-gray-400 hover:text-white"
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
+
+        {/* Filtro de Fecha */}
+        <div className="flex items-center gap-2 bg-black/10 rounded-lg px-3 py-2 border border-white/5 md:w-64" style={{ background: 'rgba(0, 0, 0, 0.15)' }}>
+          <Calendar className="text-gray-400" size={18} />
+          <input 
+            type="date" 
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="form-control text-xs text-gray-200"
+            style={{ border: 'none', background: 'transparent', padding: '0.15rem 0', width: '100%', colorScheme: 'dark', boxShadow: 'none' }}
+          />
+          {filterDate && (
+            <button 
+              onClick={() => setFilterDate('')} 
+              className="text-xs text-gray-400 hover:text-white"
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Manejo de errores */}
