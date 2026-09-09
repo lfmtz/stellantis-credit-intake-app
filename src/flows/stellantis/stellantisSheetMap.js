@@ -1,4 +1,4 @@
-import { stellantisFieldSchema } from "./stellantisFieldSchema";
+import { stellantisFieldSchema } from "./stellantisFieldSchema.js";
 
 // Genera un mapeo dinámico desde las keys del formulario en el frontend
 // hacia los cabeceros exactos esperados por el Google Sheet.

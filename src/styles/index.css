@@ -438,6 +438,10 @@ body {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.form-control:not([type="date"]) {
+  text-transform: uppercase;
+}
+
 .form-control:focus {
   outline: none;
   border-color: var(--border-focus);
@@ -1037,6 +1041,10 @@ select.form-control {
   outline: none !important;
   transition: all 0.25s ease !important;
   font-family: inherit;
+}
+
+.ai-text-input-field:not([type="date"]) {
+  text-transform: uppercase;
 }
 
 .ai-text-input-field:focus,

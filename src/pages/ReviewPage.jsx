@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit2, Check, Send, AlertCircle, FileText } from 'lucide-react';
+import { Edit2, Check, Send, AlertCircle } from 'lucide-react';
 import { stellantisFormFlow } from '../flows/stellantis/stellantisFormFlow';
 import { stellantisFieldSchema } from '../flows/stellantis/stellantisFieldSchema';
 import { validateField } from '../utils/validators';
@@ -15,7 +15,7 @@ const formatDisplayValue = (fieldId, value) => {
       return value;
     }
   }
-  return String(value);
+  return String(value).toUpperCase();
 };
 
 export default function ReviewPage({
@@ -41,6 +41,8 @@ export default function ReviewPage({
         const parts = val.split("/");
         val = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
       }
+    } else if (typeof val === "string") {
+      val = val.toUpperCase();
     }
     setTempValue(val);
     setLocalErrors((prev) => ({ ...prev, [fieldId]: '' }));
@@ -52,15 +54,19 @@ export default function ReviewPage({
 
   const saveEditing = (fieldId) => {
     const schema = stellantisFieldSchema[fieldId];
+    let valToSave = tempValue;
+    if (typeof valToSave === "string" && fieldId !== "fechaNacimiento") {
+      valToSave = valToSave.toUpperCase().trim();
+    }
     if (schema) {
-      const errorMsg = validateField(tempValue, schema.validation);
+      const errorMsg = validateField(valToSave, schema.validation);
       if (errorMsg) {
         setLocalErrors((prev) => ({ ...prev, [fieldId]: errorMsg }));
         return;
       }
     }
 
-    setFormData((prev) => ({ ...prev, [fieldId]: tempValue }));
+    setFormData((prev) => ({ ...prev, [fieldId]: valToSave }));
     setEditingField(null);
   };
 
@@ -132,8 +138,8 @@ export default function ReviewPage({
                           <div className="flex flex-col gap-2">
                             {schema.type === "select" ? (
                               <select
-                                value={tempValue}
-                                onChange={(e) => setTempValue(e.target.value)}
+                                value={tempValue ? tempValue.toUpperCase() : ""}
+                                onChange={(e) => setTempValue(e.target.value.toUpperCase())}
                                 className="form-control"
                               >
                                 <option value="" disabled>{schema.placeholder}</option>
@@ -145,8 +151,9 @@ export default function ReviewPage({
                               <input
                                 type={schema.type}
                                 value={tempValue}
-                                onChange={(e) => setTempValue(e.target.value)}
+                                onChange={(e) => setTempValue(schema.type === 'date' ? e.target.value : e.target.value.toUpperCase())}
                                 className="form-control"
+                                style={schema.type !== 'date' ? { textTransform: 'uppercase' } : undefined}
                               />
                             )}
                             {error && <span className="error-message">{error}</span>}

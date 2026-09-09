@@ -163,6 +163,9 @@ function doPost(e) {
           if (lowerHeader !== "timestamp" && lowerHeader !== "marca temporal") {
             var value = getValueFromData(data, headerName);
             if (value !== undefined) {
+              if (typeof value === "string") {
+                value = value.toUpperCase().trim();
+              }
               sheet.getRange(rowId, i + 1).setValue(value);
             }
           }
@@ -188,6 +191,9 @@ function doPost(e) {
         row.push(new Date());
       } else {
         var value = getValueFromData(data, headerName);
+        if (value !== undefined && typeof value === "string") {
+          value = value.toUpperCase().trim();
+        }
         row.push(value !== undefined ? value : "");
       }
     }
@@ -290,4 +296,44 @@ function normalizarFechasExistentes() {
       }
     }
   }
+}
+
+/**
+ * Función de una sola ejecución para convertir todos los textos de registros existentes
+ * en la hoja a MAYÚSCULAS (omitiendo marcas temporales y fechas).
+ * 
+ * Para ejecutarla:
+ * 1. Abre el editor de Apps Script en Google Sheets (Extensiones -> Apps Script).
+ * 2. Selecciona la función "convertirRegistrosExistentesAMayusculas" en la barra de herramientas superior.
+ * 3. Haz clic en "Ejecutar".
+ */
+function convertirRegistrosExistentesAMayusculas() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Respuestas de formulario 1");
+  if (!sheet) {
+    sheet = ss.getActiveSheet();
+  }
+  
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow <= 1) return;
+  
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var range = sheet.getRange(2, 1, lastRow - 1, lastCol);
+  var values = range.getValues();
+  
+  for (var r = 0; r < values.length; r++) {
+    for (var c = 0; c < headers.length; c++) {
+      var headerName = headers[c].toString().trim().toLowerCase();
+      // Omitir columnas de timestamp o fecha si no son de texto libre
+      if (headerName !== "timestamp" && headerName !== "marca temporal") {
+        var val = values[r][c];
+        if (typeof val === "string" && val.trim() !== "") {
+          values[r][c] = val.toUpperCase().trim();
+        }
+      }
+    }
+  }
+  
+  range.setValues(values);
 }

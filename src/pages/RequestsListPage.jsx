@@ -202,10 +202,10 @@ export default function RequestsListPage({ adminPassword, onEditRequest, onCreat
               </thead>
               <tbody>
                 {displayedRequests.map((req, idx) => {
-                  const nombreCompleto = `${req["Nombre(s) acreditado"] || ''} ${req["Apellido Paterno acreditado"] || ''} ${req["Apellido Materno acreditado"] || ''}`;
-                  const rfc = req["RFC"] || 'N/A';
-                  const curp = req["CURP"] || 'N/A';
-                  const email = req["Correo Electrónico"] || 'N/A';
+                  const nombreCompleto = `${req["Nombre(s) acreditado"] || ''} ${req["Apellido Paterno acreditado"] || ''} ${req["Apellido Materno acreditado"] || ''}`.toUpperCase().trim();
+                  const rfc = (req["RFC"] || 'N/A').toUpperCase();
+                  const curp = (req["CURP"] || 'N/A').toUpperCase();
+                  const email = (req["Correo Electrónico"] || 'N/A').toUpperCase();
                   const tel = req["Número Celular"] || 'N/A';
                   const rawTimestamp = req["Timestamp"] || req["Marca temporal"] || req["Marca Temporal"];
                   let timestamp = 'Sin fecha';
@@ -273,10 +273,10 @@ export default function RequestsListPage({ adminPassword, onEditRequest, onCreat
           <div className="show-on-mobile p-4">
             <div className="flex flex-col gap-4">
               {displayedRequests.map((req, idx) => {
-                const nombreCompleto = `${req["Nombre(s) acreditado"] || ''} ${req["Apellido Paterno acreditado"] || ''} ${req["Apellido Materno acreditado"] || ''}`;
-                const rfc = req["RFC"] || 'N/A';
-                const curp = req["CURP"] || 'N/A';
-                const email = req["Correo Electrónico"] || 'N/A';
+                const nombreCompleto = `${req["Nombre(s) acreditado"] || ''} ${req["Apellido Paterno acreditado"] || ''} ${req["Apellido Materno acreditado"] || ''}`.toUpperCase().trim();
+                const rfc = (req["RFC"] || 'N/A').toUpperCase();
+                const curp = (req["CURP"] || 'N/A').toUpperCase();
+                const email = (req["Correo Electrónico"] || 'N/A').toUpperCase();
                 const tel = req["Número Celular"] || 'N/A';
                 const rawTimestamp = req["Timestamp"] || req["Marca temporal"] || req["Marca Temporal"];
                 let timestamp = 'Sin fecha';

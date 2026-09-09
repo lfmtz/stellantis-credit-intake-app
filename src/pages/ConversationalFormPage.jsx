@@ -147,7 +147,15 @@ export default function ConversationalFormPage({
     }
 
     // Validar el campo actual antes de proceder
-    const value = formData[activeFieldKey];
+    let value = formData[activeFieldKey];
+    if (typeof value === "string" && activeSchema.type !== "date") {
+      value = value.toUpperCase().trim();
+      setFormData((prev) => ({ ...prev, [activeFieldKey]: value }));
+      setEngineState((prev) => ({
+        ...prev,
+        answers: { ...prev.answers, [activeFieldKey]: value }
+      }));
+    }
     const errorMsg = validateField(value, activeSchema.validation);
 
     if (errorMsg) {
@@ -224,11 +232,14 @@ export default function ConversationalFormPage({
 
   const handleInputChange = (value) => {
     setLocalError("");
-    setTypedValue(value);
-    setFormData((prev) => ({ ...prev, [activeFieldKey]: value }));
+    const formattedValue = (typeof value === "string" && activeSchema?.type !== "date")
+      ? value.toUpperCase()
+      : value;
+    setTypedValue(formattedValue);
+    setFormData((prev) => ({ ...prev, [activeFieldKey]: formattedValue }));
     setEngineState((prev) => ({
       ...prev,
-      answers: { ...prev.answers, [activeFieldKey]: value }
+      answers: { ...prev.answers, [activeFieldKey]: formattedValue }
     }));
   };
 
@@ -417,7 +428,7 @@ export default function ConversationalFormPage({
           {allFieldKeys.slice(0, engineState.currentQuestionIndex).map((key, idx) => {
             const schema = stellantisFieldSchema[key];
             const val = formData[key];
-            const displayVal = schema.type === "select" ? val : (val || "—");
+            const displayVal = schema.type === "select" ? (val ? String(val).toUpperCase() : "") : (val ? (schema.type !== "date" ? String(val).toUpperCase() : val) : "—");
 
             return (
               <React.Fragment key={key}>
@@ -468,7 +479,7 @@ export default function ConversationalFormPage({
               <div className="ai-msg-row user animate-message-slide">
                 <div className="ai-bubble user">
                   <p className="flex items-center gap-2 justify-between">
-                    <span>{formData[activeFieldKey] || "—"}</span>
+                    <span>{formData[activeFieldKey] ? (activeSchema.type !== "date" ? String(formData[activeFieldKey]).toUpperCase() : formData[activeFieldKey]) : "—"}</span>
                   </p>
                   <span className="ai-time-label flex items-center justify-end gap-1">
                     <span>Tú</span>
@@ -500,9 +511,9 @@ export default function ConversationalFormPage({
               </div>
               <div className="ai-msg-row user">
                 <div className="ai-bubble user">
-                  <p className="flex items-center gap-2 justify-between">
-                    <span>{formData[activeFieldKey] || "—"}</span>
-                  </p>
+                <p className="flex items-center gap-2 justify-between">
+                  <span>{formData[activeFieldKey] ? (activeSchema.type !== "date" ? String(formData[activeFieldKey]).toUpperCase() : formData[activeFieldKey]) : "—"}</span>
+                </p>
                   <span className="ai-time-label flex items-center justify-end gap-1">
                     <span>Tú</span>
                     <CheckCheck size={14} className="text-teal-accent" />
@@ -564,8 +575,8 @@ export default function ConversationalFormPage({
               {activeSchema.type === "select" ? (
                 <select
                   ref={inputRef}
-                  value={typedValue}
-                  onChange={(e) => handleInputChange(e.target.value)}
+                  value={typedValue ? typedValue.toUpperCase() : ""}
+                  onChange={(e) => handleInputChange(e.target.value.toUpperCase())}
                   onKeyDown={handleKeyDown}
                   className="ai-select-input-field"
                   disabled={isTyping}
@@ -584,6 +595,7 @@ export default function ConversationalFormPage({
                   onChange={(e) => handleInputChange(e.target.value)}
                   onKeyDown={handleKeyDown}
                   className="ai-text-input-field"
+                  style={activeSchema.type !== 'date' ? { textTransform: 'uppercase' } : undefined}
                   disabled={isTyping}
                 />
               )}

@@ -1,4 +1,4 @@
-import { stellantisFieldSchema } from "../../flows/stellantis/stellantisFieldSchema";
+import { stellantisFieldSchema } from "../../flows/stellantis/stellantisFieldSchema.js";
 
 // Genera un mapeo inverso desde los cabeceros de Google Sheet hacia las keys del formulario en el frontend
 const inverseMap = Object.keys(stellantisFieldSchema).reduce((acc, key) => {
@@ -41,6 +41,9 @@ export const formPayloadInverseAdapter = (sheetData) => {
       } else if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}/.test(val)) {
         // Si viene con formato ISO (ej: 1962-04-22T06:00:00.000Z) o similar, extraemos YYYY-MM-DD
         val = val.substring(0, 10);
+      } else if (typeof val === "string") {
+        // Convertir campos de texto a MAYÚSCULAS para que la edición muestre siempre mayúsculas
+        val = val.toUpperCase().trim();
       }
 
       formData[key] = val;

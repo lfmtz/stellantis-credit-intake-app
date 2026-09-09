@@ -1,4 +1,4 @@
-import { stellantisSheetMap } from "../../flows/stellantis/stellantisSheetMap";
+import { stellantisSheetMap } from "../../flows/stellantis/stellantisSheetMap.js";
 
 /**
  * Convierte el estado local del formulario de React (camelCase)
@@ -21,6 +21,9 @@ export const formPayloadAdapter = (formData) => {
         const month = parts[1];
         const day = parts[2];
         val = `${day}/${month}/${year}`;
+      } else if (typeof val === "string") {
+        // Asegurar que todos los campos de texto se inserten en MAYÚSCULAS limpias
+        val = val.toUpperCase().trim();
       }
       
       payload[sheetHeader] = val;

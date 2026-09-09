@@ -119,7 +119,7 @@ export const stellantisFieldSchema = {
     prompt: "¿Cuál es tu compañía telefónica celular?",
     type: "select",
     placeholder: "Selecciona una compañía",
-    options: ["Telcel", "Movistar", "AT&T", "Altan", "Otra"],
+    options: ["TELCEL", "MOVISTAR", "AT&T", "ALTAN", "OTRA"],
     phase: 1,
     sheetHeader: "Compañia telefonica",
     validation: {
