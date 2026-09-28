@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowRight, ArrowLeft, Send, Sparkles, AlertTriangle, CornerDownLeft, Edit2, CheckCheck, Plus, FileText } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Send, Sparkles, AlertTriangle, CornerDownLeft, Edit2, CheckCheck, Plus, FileText, Copy, Check, FastForward } from 'lucide-react';
 import { stellantisFormFlow } from '../flows/stellantis/stellantisFormFlow';
 import { stellantisFieldSchema } from '../flows/stellantis/stellantisFieldSchema';
 import { validateField } from '../utils/validators';
@@ -67,6 +67,50 @@ export default function ConversationalFormPage({
   const [welcomeStep, setWelcomeStep] = useState(0);
 
   const [typedValue, setTypedValue] = useState("");
+
+  // Rastrear el índice más avanzado alcanzado para permitir retornos directos y evitar bloqueos
+  const [furthestQuestionIndex, setFurthestQuestionIndex] = useState(() => {
+    let initialIndex = 0;
+    for (let i = 0; i < allFieldKeys.length; i++) {
+      if (formData[allFieldKeys[i]]) {
+        initialIndex = i + 1;
+      } else {
+        break;
+      }
+    }
+    return Math.min(initialIndex, allFieldKeys.length - 1);
+  });
+
+  const [copiedKey, setCopiedKey] = useState(null);
+
+  const handleCopyText = (e, text, key) => {
+    if (e) e.stopPropagation();
+    if (!text || text === "—") return;
+
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(String(text));
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = String(text);
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+
+    setCopiedKey(key);
+    setTimeout(() => {
+      setCopiedKey(null);
+    }, 1800);
+  };
+
+  const handleJumpToFurthest = () => {
+    setLocalError("");
+    setEngineState((prev) => ({
+      ...prev,
+      currentQuestionIndex: furthestQuestionIndex
+    }));
+  };
 
   const activeFieldKey = allFieldKeys[engineState.currentQuestionIndex];
   const activeSchema = stellantisFieldSchema[activeFieldKey];
@@ -176,6 +220,25 @@ export default function ConversationalFormPage({
     const updatedVisited = [...engineState.visitedQuestions];
     if (!updatedVisited.includes(activeFieldKey)) {
       updatedVisited.push(activeFieldKey);
+    }
+
+    const nextIdx = engineState.currentQuestionIndex + 1;
+    setFurthestQuestionIndex((prev) => Math.max(prev, nextIdx));
+
+    // Si estamos navegando por preguntas que ya habían sido contestadas previamente (por detrás del punto más avanzado),
+    // avanzamos al instante SIN los 2 segundos de animación
+    if (engineState.currentQuestionIndex < furthestQuestionIndex) {
+      if (nextIdx < allFieldKeys.length) {
+        setEngineState((prev) => ({
+          ...prev,
+          completedQuestions: updatedCompleted,
+          visitedQuestions: updatedVisited,
+          currentQuestionIndex: nextIdx
+        }));
+      } else {
+        setCurrentStep(5);
+      }
+      return;
     }
 
     if (engineState.currentQuestionIndex < allFieldKeys.length - 1) {
@@ -446,14 +509,42 @@ export default function ConversationalFormPage({
                 {/* Respuesta */}
                 <div 
                   className="ai-msg-row user animate-message-slide"
-                  onClick={() => handleEditQuestion(idx)}
-                  title="Haz clic aquí para cambiar esta respuesta"
                 >
                   <div className="ai-bubble user">
-                    <p className="flex items-center gap-2 justify-between">
-                      <span>{displayVal}</span>
-                      <Edit2 size={12} className="ai-edit-indicator" />
-                    </p>
+                    <div className="flex items-center gap-2 justify-between">
+                      <span className="user-answer-text">{displayVal}</span>
+                      <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                        {/* Botón de Copiar */}
+                        <button
+                          type="button"
+                          onClick={(e) => handleCopyText(e, displayVal, key)}
+                          className="ai-bubble-action-btn copy-btn"
+                          title="Copiar este dato al portapapeles"
+                        >
+                          {copiedKey === key ? (
+                            <span className="flex items-center gap-1 text-teal-accent text-xs font-semibold">
+                              <Check size={13} className="text-teal-accent" />
+                              <span className="text-[10px]">Copiado</span>
+                            </span>
+                          ) : (
+                            <Copy size={13} className="text-gray-400 hover:text-white" />
+                          )}
+                        </button>
+
+                        {/* Botón de Editar */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditQuestion(idx);
+                          }}
+                          className="ai-bubble-action-btn edit-btn"
+                          title="Editar esta respuesta"
+                        >
+                          <Edit2 size={12} className="text-gray-400 hover:text-teal-accent" />
+                        </button>
+                      </div>
+                    </div>
                     <span className="ai-time-label flex items-center justify-end gap-1">
                       <span>Tú</span>
                       <CheckCheck size={14} className="text-teal-accent" />
@@ -556,6 +647,25 @@ export default function ConversationalFormPage({
             <div className="ai-error-message-bar animate-fade-in">
               <AlertTriangle size={16} className="text-rose-400 flex-shrink-0" />
               <span>{localError}</span>
+            </div>
+          )}
+
+          {/* Banner de retorno rápido si el usuario está consultando/editando una pregunta anterior */}
+          {engineState.currentQuestionIndex < furthestQuestionIndex && (
+            <div className="ai-jump-return-banner animate-fade-in flex items-center justify-between p-2 px-3 rounded-lg mb-3">
+              <div className="flex items-center gap-2 text-xs text-gray-300">
+                <span className="text-amber-400 font-bold">📍 Modo consulta:</span>
+                <span>Paso {engineState.currentQuestionIndex + 1} de {allFieldKeys.length}</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleJumpToFurthest}
+                className="btn-jump-return"
+                title="Volver al último paso alcanzado"
+              >
+                <FastForward size={14} />
+                <span>Volver a donde me quedé (Paso {furthestQuestionIndex + 1})</span>
+              </button>
             </div>
           )}
 

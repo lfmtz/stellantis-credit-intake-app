@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit2, Check, Send, AlertCircle } from 'lucide-react';
+import { Edit2, Check, Send, AlertCircle, Copy } from 'lucide-react';
 import { stellantisFormFlow } from '../flows/stellantis/stellantisFormFlow';
 import { stellantisFieldSchema } from '../flows/stellantis/stellantisFieldSchema';
 import { validateField } from '../utils/validators';
@@ -29,6 +29,26 @@ export default function ReviewPage({
   const [editingField, setEditingField] = useState(null);
   const [tempValue, setTempValue] = useState('');
   const [localErrors, setLocalErrors] = useState({});
+  const [copiedField, setCopiedField] = useState(null);
+
+  const handleCopyField = (fieldId, value) => {
+    if (!value) return;
+    const textToCopy = formatDisplayValue(fieldId, value);
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(String(textToCopy));
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = String(textToCopy);
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setCopiedField(fieldId);
+    setTimeout(() => {
+      setCopiedField(null);
+    }, 1800);
+  };
 
   const startEditing = (fieldId, currentVal) => {
     setEditingField(fieldId);
@@ -123,13 +143,29 @@ export default function ReviewPage({
                       <div className="flex justify-between items-start">
                         <span className="review-field-label">{schema.label}</span>
                         {!isEditing && (
-                          <button
-                            onClick={() => startEditing(fieldId, value)}
-                            className="btn-icon-edit"
-                            title="Editar campo"
-                          >
-                            <Edit2 size={14} />
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            {value && (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyField(fieldId, value)}
+                                className="btn-icon-edit"
+                                title="Copiar este dato al portapapeles"
+                              >
+                                {copiedField === fieldId ? (
+                                  <Check size={14} className="text-teal-accent" />
+                                ) : (
+                                  <Copy size={14} />
+                                )}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => startEditing(fieldId, value)}
+                              className="btn-icon-edit"
+                              title="Editar campo"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                          </div>
                         )}
                       </div>
 

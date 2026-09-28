@@ -337,3 +337,83 @@ function convertirRegistrosExistentesAMayusculas() {
   
   range.setValues(values);
 }
+
+/**
+ * Función para importar directamente la fila 4 (marca temporal 5/12/2024 0:56:48)
+ * desde el archivo "SOL_CREDITO_ACTUAL_2026" hacia la hoja activa.
+ * 
+ * Para ejecutarla:
+ * 1. Abre el editor de Apps Script en tu hoja destino (Extensiones -> Apps Script).
+ * 2. Selecciona la función "importarRegistroDesdeSolCredito" arriba.
+ * 3. Haz clic en "Ejecutar".
+ */
+function importarRegistroDesdeSolCredito() {
+  var fileName = "SOL_CREDITO_ACTUAL_2026";
+  var files = DriveApp.getFilesByName(fileName);
+  
+  if (!files.hasNext()) {
+    throw new Error("No se encontró el archivo '" + fileName + "' en Google Drive. Verifica que el nombre sea exacto o que tengas acceso.");
+  }
+  
+  var sourceSS = SpreadsheetApp.open(files.next());
+  var sourceSheet = sourceSS.getSheets()[0];
+  var sourceData = sourceSheet.getDataRange().getValues();
+  
+  if (sourceData.length < 2) {
+    throw new Error("El archivo origen '" + fileName + "' no contiene filas de datos.");
+  }
+  
+  var sourceHeaders = sourceData[0];
+  
+  // Buscar fila 4 (índice 3 en base 0) o que coincida con la marca temporal
+  var targetRowIndex = -1;
+  var targetTimestamp = "5/12/2024 0:56:48";
+  
+  for (var r = 1; r < sourceData.length; r++) {
+    var cellValue = sourceData[r][0] ? sourceData[r][0].toString() : "";
+    if (r === 3 || cellValue.indexOf("5/12/2024") !== -1 || cellValue.indexOf("0:56:48") !== -1) {
+      targetRowIndex = r;
+      break;
+    }
+  }
+  
+  if (targetRowIndex === -1) {
+    targetRowIndex = Math.min(3, sourceData.length - 1); // Fallback a fila 4
+  }
+  
+  var sourceRow = sourceData[targetRowIndex];
+  
+  // Crear mapa de clave -> valor del origen
+  var sourceMap = {};
+  for (var c = 0; c < sourceHeaders.length; c++) {
+    var h = sourceHeaders[c].toString().trim();
+    if (h) {
+      sourceMap[h] = sourceRow[c];
+    }
+  }
+  
+  // Hoja destino
+  var destSS = SpreadsheetApp.getActiveSpreadsheet();
+  var destSheet = destSS.getSheetByName("Respuestas de formulario 1") || destSS.getActiveSheet();
+  var destHeaders = destSheet.getRange(1, 1, 1, destSheet.getLastColumn()).getValues()[0];
+  
+  var newRow = [];
+  for (var i = 0; i < destHeaders.length; i++) {
+    var destHeaderName = destHeaders[i].toString().trim();
+    var lowerHeader = destHeaderName.toLowerCase();
+    
+    if (lowerHeader === "timestamp" || lowerHeader === "marca temporal") {
+      newRow.push(sourceRow[0] || new Date());
+    } else {
+      var val = getValueFromData(sourceMap, destHeaderName);
+      if (val !== undefined && typeof val === "string") {
+        val = val.toUpperCase().trim();
+      }
+      newRow.push(val !== undefined ? val : "");
+    }
+  }
+  
+  destSheet.appendRow(newRow);
+  Logger.log("¡Éxito! Se importó el registro de la fila " + (targetRowIndex + 1) + " del archivo '" + fileName + "' a la hoja '" + destSheet.getName() + "'.");
+}
+
