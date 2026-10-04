@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowRight, ArrowLeft, Send, Sparkles, AlertTriangle, CornerDownLeft, Edit2, CheckCheck, Plus, FileText, Copy, Check, FastForward } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Send, Sparkles, AlertTriangle, CornerDownLeft, Edit2, CheckCheck, Plus, FileText, Copy, Check, FastForward, Zap } from 'lucide-react';
 import { stellantisFormFlow } from '../flows/stellantis/stellantisFormFlow';
 import { stellantisFieldSchema } from '../flows/stellantis/stellantisFieldSchema';
 import { validateField } from '../utils/validators';
@@ -53,10 +53,28 @@ export default function ConversationalFormPage({
   });
 
   const [localError, setLocalError] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [isSavingNote, setIsSavingNote] = useState(false);
   const inputRef = useRef(null);
-  const feedEndRef = useRef(null);
+  const chatBodyRef = useRef(null);
+
+  // Modo rápido: elimina animaciones para captura ágil (asesores / usuarios expertos).
+  // Se recuerda en localStorage; por defecto activo en modo administrador (?admin=true).
+  const [fastMode, setFastMode] = useState(() => {
+    try {
+      const stored = localStorage.getItem('stellantis.fastMode');
+      if (stored !== null) return stored === 'true';
+    } catch { /* localStorage no disponible */ }
+    return new URLSearchParams(window.location.search).get('admin') === 'true';
+  });
+
+  const toggleFastMode = () => {
+    setFastMode((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('stellantis.fastMode', String(next)); } catch { /* ignorar */ }
+      return next;
+    });
+    // Devolver el foco al input para seguir capturando sin usar el mouse ni desplazar la ventana
+    setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 0);
+  };
 
   // Impedir que el llenado automático salte la bienvenida
   const [hasStarted, setHasStarted] = useState(false);
@@ -122,37 +140,40 @@ export default function ConversationalFormPage({
     }
   }, [engineState.currentQuestionIndex, activeFieldKey]);
 
-  // Secuencia de bienvenida
+  // Secuencia de bienvenida (ágil: ~0.9s total; instantánea en Modo rápido)
   useEffect(() => {
     if (!hasStarted) {
       const p1 = "¡Hola! Bienvenido al asistente inteligente de Stellantis Credit.";
       const p2 = "Cuéntanos sobre ti para iniciar el proceso.";
       const p3 = "Te guiaré paso a paso mediante esta entrevista interactiva e iré tomando nota de tu información en tiempo real. ¡Comencemos!";
 
+      if (fastMode) {
+        setWelcomeParagraphs([p1, p2, p3]);
+        setWelcomeTyping(false);
+        setWelcomeStep(3);
+        return;
+      }
+
       setWelcomeTyping(true);
-      const t1 = setTimeout(() => {
-        setWelcomeParagraphs([p1]);
-        setWelcomeStep(1);
-        
-        const t2 = setTimeout(() => {
+      const timers = [
+        setTimeout(() => {
+          setWelcomeParagraphs([p1]);
+          setWelcomeStep(1);
+        }, 250),
+        setTimeout(() => {
           setWelcomeParagraphs([p1, p2]);
           setWelcomeStep(2);
-          
-          const t3 = setTimeout(() => {
-            setWelcomeParagraphs([p1, p2, p3]);
-            setWelcomeTyping(false);
-            setWelcomeStep(3);
-          }, 2000);
-          return () => clearTimeout(t3);
-        }, 1800);
-        return () => clearTimeout(t2);
-      }, 1200);
+        }, 550),
+        setTimeout(() => {
+          setWelcomeParagraphs([p1, p2, p3]);
+          setWelcomeTyping(false);
+          setWelcomeStep(3);
+        }, 900)
+      ];
 
-      return () => {
-        clearTimeout(t1);
-      };
+      return () => timers.forEach(clearTimeout);
     }
-  }, [hasStarted]);
+  }, [hasStarted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 3. Sincronizar fase con el paso activo del formulario
   useEffect(() => {
@@ -165,19 +186,27 @@ export default function ConversationalFormPage({
     }
   }, [hasStarted, engineState.currentQuestionIndex, activeSchema, setCurrentStep]);
 
-  // Enfoque automático del input
+  // Enfoque automático del input sin saltos de scroll en la ventana
   useEffect(() => {
-    if (inputRef.current && !isTyping && !isSavingNote) {
-      inputRef.current.focus();
+    if (inputRef.current) {
+      inputRef.current.focus({ preventScroll: true });
     }
-  }, [engineState.currentQuestionIndex, isTyping, isSavingNote]);
+  }, [engineState.currentQuestionIndex]);
 
-  // Desplazamiento automático al fondo del chat
+  // Desplazamiento automático al fondo del chat (SOLO dentro de la caja del chat, sin mover la pantalla)
   useEffect(() => {
-    if (feedEndRef.current) {
-      feedEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (chatBodyRef.current) {
+      // Usamos requestAnimationFrame para asegurar que el DOM ya calculó la altura del nuevo mensaje
+      requestAnimationFrame(() => {
+        if (chatBodyRef.current) {
+          chatBodyRef.current.scrollTo({
+            top: chatBodyRef.current.scrollHeight,
+            behavior: fastMode ? 'auto' : 'smooth'
+          });
+        }
+      });
     }
-  }, [engineState.currentQuestionIndex, isTyping, isSavingNote]);
+  }, [engineState.currentQuestionIndex, fastMode]);
 
   const handleNext = () => {
     if (!hasStarted) {
@@ -225,44 +254,22 @@ export default function ConversationalFormPage({
     const nextIdx = engineState.currentQuestionIndex + 1;
     setFurthestQuestionIndex((prev) => Math.max(prev, nextIdx));
 
-    // Si estamos navegando por preguntas que ya habían sido contestadas previamente (por detrás del punto más avanzado),
-    // avanzamos al instante SIN los 2 segundos de animación
-    if (engineState.currentQuestionIndex < furthestQuestionIndex) {
-      if (nextIdx < allFieldKeys.length) {
-        setEngineState((prev) => ({
-          ...prev,
-          completedQuestions: updatedCompleted,
-          visitedQuestions: updatedVisited,
-          currentQuestionIndex: nextIdx
-        }));
-      } else {
-        setCurrentStep(5);
-      }
-      return;
-    }
-
-    if (engineState.currentQuestionIndex < allFieldKeys.length - 1) {
-      // Efecto "Tomando Nota" por 1 segundo, luego "Redactando siguiente pregunta" por 800ms
-      setIsSavingNote(true);
-      setTimeout(() => {
-        setIsSavingNote(false);
-        setIsTyping(true);
-        setTimeout(() => {
-          setIsTyping(false);
-          setEngineState((prev) => ({
-            ...prev,
-            completedQuestions: updatedCompleted,
-            visitedQuestions: updatedVisited,
-            currentQuestionIndex: prev.currentQuestionIndex + 1
-          }));
-        }, 800);
-      }, 1200);
+    // Avance inmediato: sin esperas artificiales ("Tomando nota" / "Redactando").
+    // La sensación conversacional la da la animación corta de la nueva burbuja (o ninguna en Modo rápido).
+    if (nextIdx < allFieldKeys.length) {
+      setEngineState((prev) => ({
+        ...prev,
+        completedQuestions: updatedCompleted,
+        visitedQuestions: updatedVisited,
+        currentQuestionIndex: nextIdx
+      }));
     } else {
-      setIsSavingNote(true);
-      setTimeout(() => {
-        setIsSavingNote(false);
-        setCurrentStep(5); // Pantalla de revisión final
-      }, 1000);
+      setEngineState((prev) => ({
+        ...prev,
+        completedQuestions: updatedCompleted,
+        visitedQuestions: updatedVisited
+      }));
+      setCurrentStep(5); // Pantalla de revisión final
     }
   };
 
@@ -410,9 +417,9 @@ export default function ConversationalFormPage({
         <div className="text-center mt-8">
           <button 
             onClick={handleNext} 
-            className={`btn btn-primary btn-large btn-welcome ${welcomeStep === 3 ? 'btn-welcome-ready' : ''}`}
+            className="btn btn-primary btn-large btn-welcome btn-welcome-ready"
           >
-            {welcomeStep === 3 ? "¡Empecemos!" : "Omitir presentación"} <ArrowRight size={18} />
+            ¡Empecemos! <ArrowRight size={18} />
           </button>
         </div>
       </div>
@@ -448,7 +455,7 @@ export default function ConversationalFormPage({
   };
 
   return (
-    <div className="conversational-wizard-container animate-fade-in max-w-2xl mx-auto">
+    <div className={`conversational-wizard-container animate-fade-in max-w-2xl mx-auto ${fastMode ? 'fast-mode' : ''}`}>
       
       {/* Progreso General */}
       <div className="conversational-progress mb-3 flex justify-between items-center">
@@ -475,17 +482,29 @@ export default function ConversationalFormPage({
               <h3 className="ai-core-title">Asesor Inteligente</h3>
               <div className="ai-core-status">
                 <span className="ai-core-status-dot"></span>
-                <span>{isSavingNote ? "Anotando respuesta..." : isTyping ? "IA está redactando..." : "En línea"}</span>
+                <span>{fastMode ? "En línea · Captura rápida" : "En línea"}</span>
               </div>
             </div>
           </div>
-          <span className="ai-phase-tag">
-            Fase {currentStep} de 4
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleFastMode}
+              className={`fast-mode-toggle ${fastMode ? 'active' : ''}`}
+              title={fastMode ? "Desactivar modo rápido (con animaciones)" : "Activar modo rápido (sin animaciones)"}
+              aria-pressed={fastMode}
+            >
+              <Zap size={12} />
+              <span>Modo rápido</span>
+            </button>
+            <span className="ai-phase-tag">
+              Fase {currentStep} de 4
+            </span>
+          </div>
         </div>
 
         {/* Cuerpo del Chat */}
-        <div className="ai-terminal-body">
+        <div className="ai-terminal-body" ref={chatBodyRef}>
 
           {/* Historial de la Conversación */}
           {allFieldKeys.slice(0, engineState.currentQuestionIndex).map((key, idx) => {
@@ -555,90 +574,16 @@ export default function ConversationalFormPage({
             );
           })}
 
-          {/* Si está guardando nota de la pregunta actual */}
-          {isSavingNote && (
-            <>
-              {renderPhaseIntro(activeFieldKey)}
-              {/* Mostrar la pregunta activa */}
-              <div className="ai-msg-row bot animate-message-slide">
-                <div className="ai-bubble bot">
-                  <p>{activeSchema.prompt}</p>
-                  <span className="ai-time-label">IA</span>
-                </div>
+          {/* Pregunta Activa: aparece al instante con una animación corta (sin esperas artificiales) */}
+          <React.Fragment key={`active-${activeFieldKey}`}>
+            {renderPhaseIntro(activeFieldKey)}
+            <div className="ai-msg-row bot animate-message-slide">
+              <div className="ai-bubble bot active-question">
+                <p>{activeSchema.prompt}</p>
+                <span className="ai-time-label">IA</span>
               </div>
-              {/* Mostrar la respuesta que se acaba de enviar */}
-              <div className="ai-msg-row user animate-message-slide">
-                <div className="ai-bubble user">
-                  <p className="flex items-center gap-2 justify-between">
-                    <span>{formData[activeFieldKey] ? (activeSchema.type !== "date" ? String(formData[activeFieldKey]).toUpperCase() : formData[activeFieldKey]) : "—"}</span>
-                  </p>
-                  <span className="ai-time-label flex items-center justify-end gap-1">
-                    <span>Tú</span>
-                    <CheckCheck size={14} className="text-teal-accent" />
-                  </span>
-                </div>
-              </div>
-              {/* Mostrar el estado "Anotando respuesta..." */}
-              <div className="ai-msg-row bot animate-message-slide">
-                <div className="ai-bubble bot note-taking-bubble">
-                  <div className="flex items-center gap-2 text-xs text-teal-accent font-semibold">
-                    <span className="writing-pen-anim">📝</span>
-                    <span>Guardando respuesta en el expediente...</span>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Si se está redactando la siguiente pregunta */}
-          {isTyping && (
-            <>
-              {renderPhaseIntro(activeFieldKey)}
-              <div className="ai-msg-row bot">
-                <div className="ai-bubble bot">
-                  <p>{activeSchema.prompt}</p>
-                  <span className="ai-time-label">IA</span>
-                </div>
-              </div>
-              <div className="ai-msg-row user">
-                <div className="ai-bubble user">
-                <p className="flex items-center gap-2 justify-between">
-                  <span>{formData[activeFieldKey] ? (activeSchema.type !== "date" ? String(formData[activeFieldKey]).toUpperCase() : formData[activeFieldKey]) : "—"}</span>
-                </p>
-                  <span className="ai-time-label flex items-center justify-end gap-1">
-                    <span>Tú</span>
-                    <CheckCheck size={14} className="text-teal-accent" />
-                  </span>
-                </div>
-              </div>
-              {/* Y mostramos la burbuja de escribiendo de la nueva pregunta */}
-              <div className="ai-msg-row bot animate-message-slide">
-                <div className="ai-bubble bot active-question">
-                  <div className="ai-typing-dots">
-                    <div className="ai-typing-dot"></div>
-                    <div className="ai-typing-dot"></div>
-                    <div className="ai-typing-dot"></div>
-                  </div>
-                  <span className="ai-time-label">IA</span>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Pregunta Activa (sólo si NO se está guardando ni escribiendo) */}
-          {!isSavingNote && !isTyping && (
-            <>
-              {renderPhaseIntro(activeFieldKey)}
-              <div className="ai-msg-row bot animate-message-slide">
-                <div className="ai-bubble bot active-question">
-                  <p>{activeSchema.prompt}</p>
-                  <span className="ai-time-label">IA</span>
-                </div>
-              </div>
-            </>
-          )}
-
-          <div ref={feedEndRef} />
+            </div>
+          </React.Fragment>
         </div>
 
         {/* Panel de Inputs */}
@@ -689,7 +634,6 @@ export default function ConversationalFormPage({
                   onChange={(e) => handleInputChange(e.target.value.toUpperCase())}
                   onKeyDown={handleKeyDown}
                   className="ai-select-input-field"
-                  disabled={isTyping}
                 >
                   <option value="" disabled>{activeSchema.placeholder}</option>
                   {activeSchema.options.map((opt) => (
@@ -706,7 +650,6 @@ export default function ConversationalFormPage({
                   onKeyDown={handleKeyDown}
                   className="ai-text-input-field"
                   style={activeSchema.type !== 'date' ? { textTransform: 'uppercase' } : undefined}
-                  disabled={isTyping}
                 />
               )}
             </div>
@@ -716,7 +659,6 @@ export default function ConversationalFormPage({
               type="button"
               className="ai-control-btn send"
               onClick={handleNext}
-              disabled={isTyping}
               title="Enviar respuesta"
             >
               <Send size={18} />

@@ -686,7 +686,7 @@ select.form-control {
 .ai-terminal-container {
   display: flex;
   flex-direction: column;
-  height: 600px;
+  height: clamp(460px, 72vh, 620px);
   background: rgba(8, 14, 28, 0.65);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -958,20 +958,54 @@ select.form-control {
   color: rgba(3, 7, 18, 0.5);
 }
 
-/* GSAP-like slide-up animations */
+/* GSAP-like slide-up animations (cortas para que la conversación se sienta ágil) */
 .animate-message-slide {
-  animation: messageSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: messageSlideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes messageSlideUp {
   from {
     opacity: 0;
-    transform: translateY(24px) scale(0.97);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
+}
+
+/* Modo rápido: sin animaciones de mensajes para captura ágil */
+.fast-mode .animate-message-slide,
+.fast-mode .animate-fade-in {
+  animation: none !important;
+}
+
+/* Interruptor de Modo rápido */
+.fast-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.fast-mode-toggle:hover {
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.6);
+}
+
+.fast-mode-toggle.active {
+  background: rgba(250, 204, 21, 0.12);
+  border-color: rgba(250, 204, 21, 0.55);
+  color: #facc15;
 }
 
 /* AI Typing Indicator */
