@@ -10,14 +10,20 @@ export default function ConversationalFormPage({
   formData,
   setFormData,
   errors,
-  setErrors
+  setErrors,
+  formFlow = stellantisFormFlow,
+  fieldSchema = stellantisFieldSchema,
+  isConyugeMode = false
 }) {
+  const activePhases = formFlow.phases.filter(p => p.fields && p.fields.length > 0);
+  const totalPhases = activePhases.length;
+
   // 1. Obtener todas las preguntas en orden consecutivo
   const allFieldKeys = [];
-  stellantisFormFlow.phases.forEach((phase) => {
+  formFlow.phases.forEach((phase) => {
     if (phase.fields && phase.fields.length > 0) {
       // Solo incluimos campos que no estén marcados como 'hidden' en el esquema
-      const activeFields = phase.fields.filter(key => !stellantisFieldSchema[key]?.hidden);
+      const activeFields = phase.fields.filter(key => !fieldSchema[key]?.hidden);
       allFieldKeys.push(...activeFields);
     }
   });
@@ -44,7 +50,7 @@ export default function ConversationalFormPage({
     }
 
     return {
-      currentPhase: stellantisFieldSchema[allFieldKeys[initialIndex]]?.phase || 1,
+      currentPhase: fieldSchema[allFieldKeys[initialIndex]]?.phase || 1,
       currentQuestionIndex: initialIndex,
       answers: formData,
       visitedQuestions: visited,
@@ -131,7 +137,7 @@ export default function ConversationalFormPage({
   };
 
   const activeFieldKey = allFieldKeys[engineState.currentQuestionIndex];
-  const activeSchema = stellantisFieldSchema[activeFieldKey];
+  const activeSchema = fieldSchema[activeFieldKey];
 
   // Sincronizar typedValue cuando cambie de pregunta
   useEffect(() => {
@@ -143,9 +149,15 @@ export default function ConversationalFormPage({
   // Secuencia de bienvenida (ágil: ~0.9s total; instantánea en Modo rápido)
   useEffect(() => {
     if (!hasStarted) {
-      const p1 = "¡Hola! Bienvenido al asistente inteligente de Stellantis Credit.";
-      const p2 = "Cuéntanos sobre ti para iniciar el proceso.";
-      const p3 = "Te guiaré paso a paso mediante esta entrevista interactiva e iré tomando nota de tu información en tiempo real. ¡Comencemos!";
+      const p1 = isConyugeMode
+        ? "¡Hola! Bienvenido al asistente de Stellantis Credit para cotitular / cónyuge."
+        : "¡Hola! Bienvenido al asistente inteligente de Stellantis Credit.";
+      const p2 = isConyugeMode
+        ? "Completaremos tus datos para mancomunar ingresos con la solicitud de tu pareja."
+        : "Cuéntanos sobre ti para iniciar el proceso.";
+      const p3 = isConyugeMode
+        ? "Te guiaré paso a paso mediante esta breve entrevista e iré registrando tus datos. ¡Comencemos!"
+        : "Te guiaré paso a paso mediante esta entrevista interactiva e iré tomando nota de tu información en tiempo real. ¡Comencemos!";
 
       if (fastMode) {
         setWelcomeParagraphs([p1, p2, p3]);
@@ -433,9 +445,9 @@ export default function ConversationalFormPage({
 
   // Helper para verificar si un campo es el primero de su fase y debe mostrar una introducción
   const renderPhaseIntro = (key) => {
-    const schema = stellantisFieldSchema[key];
+    const schema = fieldSchema[key];
     if (!schema) return null;
-    const phase = stellantisFormFlow.phases.find((p) => p.id === schema.phase);
+    const phase = formFlow.phases.find((p) => p.id === schema.phase);
     if (!phase) return null;
     
     // Si la clave de pregunta es la primera listada en esta fase
@@ -460,7 +472,7 @@ export default function ConversationalFormPage({
       {/* Progreso General */}
       <div className="conversational-progress mb-3 flex justify-between items-center">
         <span className="step-badge font-bold">
-          Fase {currentStep}: {stellantisFormFlow.phases[currentStep].title}
+          Fase {currentStep}: {formFlow.phases[currentStep]?.title || "Solicitud"}
         </span>
         <span className="text-xs text-gray-400">
           Progreso de Solicitud: {progressPercent}%
@@ -498,7 +510,7 @@ export default function ConversationalFormPage({
               <span>Modo rápido</span>
             </button>
             <span className="ai-phase-tag">
-              Fase {currentStep} de 4
+              Fase {currentStep} de {totalPhases}
             </span>
           </div>
         </div>
@@ -508,7 +520,8 @@ export default function ConversationalFormPage({
 
           {/* Historial de la Conversación */}
           {allFieldKeys.slice(0, engineState.currentQuestionIndex).map((key, idx) => {
-            const schema = stellantisFieldSchema[key];
+            const schema = fieldSchema[key];
+            if (!schema) return null;
             const val = formData[key];
             const displayVal = schema.type === "select" ? (val ? String(val).toUpperCase() : "") : (val ? (schema.type !== "date" ? String(val).toUpperCase() : val) : "—");
 

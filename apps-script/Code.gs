@@ -58,7 +58,29 @@ var HEADERS_ORDER = [
   "Apellido Paterno (solo nombre) referencia 3",
   "Parentesco ref 3",
   "Teléfono de la Referencia 3",
-  "Ocupacion de la referencia 3"
+  "Ocupacion de la referencia 3",
+  // Bloque Cónyuge / Coacreditado (Mancomunar Ingresos)
+  "Nombre(s)_conyuge",
+  "Apellido_Paterno_conyuge",
+  "Apellido_Materno_conyuge",
+  "Fecha_de_nacimiento_conyuge",
+  "NACIONALIDAD_CONYU",
+  "RFC_CONYUGE",
+  "Entidad_Federativa_de_nacimiento_conyuge",
+  "CURP_CONYUGE",
+  "OCUPACION_CONYUGE",
+  "NOM_EMPRESA_CONYUGE",
+  "GIRO_EMP_CONYUGE",
+  "TEL_EMPRESA_CONYUGE",
+  "CALL_EMPRESA_CONYUGE",
+  "NUM_EXTINT_EM_CONY",
+  "COL_EM_CONY",
+  "ALC_MUN_EMP_CONY",
+  "CP_EMP_CONYUGE",
+  "CIUDAD_POB_EMP_CONYUGE",
+  "ESTADO_EMP_CONYUGE",
+  "INGRESOS_CONYUGE",
+  "ANTIGUEDAD_EMP_CONYUGE"
 ];
 
 function doGet(e) {
@@ -117,23 +139,47 @@ function doGet(e) {
   }
 }
 
+// Asegura que todas las columnas definidas en HEADERS_ORDER existan en la fila 1
+function asegurarCabeceros(sheet) {
+  var lastCol = Math.max(sheet.getLastColumn(), 1);
+  var currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var normalizedExisting = currentHeaders.map(function(h) {
+    return h.toString().trim().toLowerCase();
+  });
+
+  for (var i = 0; i < HEADERS_ORDER.length; i++) {
+    var header = HEADERS_ORDER[i];
+    if (normalizedExisting.indexOf(header.toLowerCase()) === -1) {
+      lastCol++;
+      sheet.getRange(1, lastCol).setValue(header);
+      normalizedExisting.push(header.toLowerCase());
+    }
+  }
+}
+
 function doPost(e) {
+  var lock = LockService.getScriptLock();
   try {
+    // Bloqueo de concurrencia: espera hasta 30 segundos si ambos envían al mismo tiempo
+    lock.waitLock(30000);
+
     // Parseo de los datos del POST
     var jsonString = e.postData.contents;
     var data = JSON.parse(jsonString);
     
-    // Abrir la hoja activa por el nombre de la pestaña específica
+    // Abrir la hoja: buscar pestañas comunes o la primera disponible
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getSheetByName("Respuestas de formulario 1");
-    if (!sheet) {
-      // Fallback si por alguna razón no se llama exactamente igual
-      sheet = ss.getActiveSheet();
-    }
+    var sheet = ss.getSheetByName("Respuestas de formulario 1") || 
+                ss.getSheetByName("Respuestas a formulario 1") ||
+                ss.getSheetByName("Form Responses 1") ||
+                ss.getSheetByName("Hoja 1") ||
+                ss.getSheets()[0];
     
-    // Si la hoja está vacía, creamos los cabeceros oficiales
+    // Si la hoja está vacía, creamos los cabeceros oficiales; de lo contrario, aseguramos columnas nuevas
     if (sheet.getLastRow() === 0) {
       sheet.appendRow(HEADERS_ORDER);
+    } else {
+      asegurarCabeceros(sheet);
     }
     
     // Leer los cabeceros que existen actualmente en la primera fila de la hoja
@@ -141,9 +187,8 @@ function doPost(e) {
     var headersRange = sheet.getRange(1, 1, 1, lastCol);
     var sheetHeaders = headersRange.getValues()[0];
     
-    // Si la acción es actualizar
+    // CASO 1: Actualización explícita por rowId (panel de administración)
     if (data.action === "update" && data.rowId) {
-      // Validar contraseña para edición
       if (data.password !== ADMIN_PASSWORD) {
         return ContentService.createTextOutput(JSON.stringify({
           success: false,
@@ -154,12 +199,9 @@ function doPost(e) {
 
       var rowId = parseInt(data.rowId, 10);
       if (rowId >= 2 && rowId <= sheet.getLastRow()) {
-        // En lugar de appendRow, actualizamos la fila existente
         for (var i = 0; i < sheetHeaders.length; i++) {
           var headerName = sheetHeaders[i].toString().trim();
           var lowerHeader = headerName.toLowerCase();
-          
-          // No actualizamos el Timestamp original para mantener la fecha original de registro
           if (lowerHeader !== "timestamp" && lowerHeader !== "marca temporal") {
             var value = getValueFromData(data, headerName);
             if (value !== undefined) {
@@ -181,12 +223,71 @@ function doPost(e) {
       }
     }
     
-    // Generar la nueva fila alineando dinámicamente con los cabeceros del Google Sheet
+    // CASO 2: Fusión inteligente (por targetRowId O por RFC de abajo hacia arriba)
+    var searchRfc = (data['RFC'] || data['rfc'] || data['rfcAcreditado'] || '').toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    var targetRowId = parseInt(data.targetRowId || (data.action !== "update" ? data.rowId : null), 10);
+    var existingRowIndex = -1;
+
+    // A) Si viene un targetRowId válido enviado por el frontend (del enlace del titular), lo usamos
+    if (!isNaN(targetRowId) && targetRowId >= 2 && targetRowId <= sheet.getLastRow()) {
+      existingRowIndex = targetRowId;
+    }
+
+    // B) Si no hay targetRowId o falló, buscamos por RFC de abajo hacia arriba (el más reciente)
+    if (existingRowIndex === -1 && searchRfc && searchRfc.length >= 10 && sheet.getLastRow() >= 2) {
+      var rfcColIdx = -1;
+      for (var h = 0; h < sheetHeaders.length; h++) {
+        var hUpper = sheetHeaders[h].toString().trim().toUpperCase();
+        if (hUpper === "RFC" || hUpper.indexOf("RFC") === 0 || hUpper === "RFC ACREDITADO" || hUpper === "RFC DEL ACREDITADO") {
+          rfcColIdx = h + 1;
+          break;
+        }
+      }
+
+      if (rfcColIdx !== -1) {
+        var rfcValues = sheet.getRange(2, rfcColIdx, sheet.getLastRow() - 1, 1).getValues();
+        // Búsqueda inversa: desde la fila más reciente hacia atrás
+        for (var r = rfcValues.length - 1; r >= 0; r--) {
+          var cellVal = rfcValues[r][0].toString().trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+          if (cellVal === searchRfc) {
+            existingRowIndex = r + 2; // Fila física en Sheets
+            break;
+          }
+        }
+      }
+    }
+
+    if (existingRowIndex !== -1) {
+      // Si la fila ya existe con este RFC o targetRowId,
+      // actualizamos fusionando solo los campos enviados que no vengan vacíos
+      for (var i = 0; i < sheetHeaders.length; i++) {
+        var headerName = sheetHeaders[i].toString().trim();
+        var lowerHeader = headerName.toLowerCase();
+        if (lowerHeader !== "timestamp" && lowerHeader !== "marca temporal") {
+          var value = getValueFromData(data, headerName);
+          if (value !== undefined && value !== null && value !== "") {
+            if (typeof value === "string") {
+              value = value.toUpperCase().trim();
+            }
+            sheet.getRange(existingRowIndex, i + 1).setValue(value);
+          }
+        }
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        message: "Registro vinculado y fusionado exitosamente en fila " + existingRowIndex,
+        rowId: existingRowIndex,
+        action: "merged"
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // CASO 3: Fila nueva (ninguno de los dos había enviado con este RFC)
     var row = [];
     for (var i = 0; i < sheetHeaders.length; i++) {
       var headerName = sheetHeaders[i].toString().trim();
       var lowerHeader = headerName.toLowerCase();
-      // Detecta "Timestamp", "Marca temporal", "Marca Temporal", "fecha", etc.
       if (lowerHeader === "timestamp" || lowerHeader === "marca temporal") {
         row.push(new Date());
       } else {
@@ -198,13 +299,14 @@ function doPost(e) {
       }
     }
     
-    // Guardar fila en Google Sheets
+    // Guardar fila nueva en Google Sheets
     sheet.appendRow(row);
     
-    // Retornar éxito
     return ContentService.createTextOutput(JSON.stringify({
       success: true,
-      message: "Registro guardado exitosamente"
+      message: "Registro guardado exitosamente",
+      rowId: sheet.getLastRow(),
+      action: "inserted"
     }))
     .setMimeType(ContentService.MimeType.JSON);
     
@@ -214,6 +316,8 @@ function doPost(e) {
       error: error.toString()
     }))
     .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
   }
 }
 

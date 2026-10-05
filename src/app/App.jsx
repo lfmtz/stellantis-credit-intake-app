@@ -6,7 +6,10 @@ import RequestsListPage from '../pages/RequestsListPage';
 import AdminLogin from '../components/AdminLogin';
 import { submitFormToSheets, updateFormInSheets } from '../services/api/sheetsApi';
 import { formPayloadAdapter } from '../services/adapters/formPayloadAdapter';
-import { Sparkles, FileText, PlusCircle } from 'lucide-react';
+import { stellantisFormFlow } from '../flows/stellantis/stellantisFormFlow';
+import { conyugeFormFlow } from '../flows/stellantis/conyugeFormFlow';
+import { stellantisFieldSchema } from '../flows/stellantis/stellantisFieldSchema';
+import { Sparkles, FileText } from 'lucide-react';
 
 const INITIAL_FORM_DATA = {
   // Fase 1
@@ -63,9 +66,48 @@ const INITIAL_FORM_DATA = {
   ref3Ocupacion: ""
 };
 
+const INITIAL_CONYUGE_DATA = {
+  rfcAcreditado: "",
+  nombreConyuge: "",
+  apellidoPaternoConyuge: "",
+  apellidoMaternoConyuge: "",
+  fechaNacimientoConyuge: "",
+  nacionalidadConyuge: "MEXICANA",
+  rfcConyuge: "",
+  entidadFederativaNacimientoConyuge: "",
+  curpConyuge: "",
+  ocupacionConyuge: "",
+  nombreEmpresaConyuge: "",
+  giroEmpresaConyuge: "",
+  telefonoEmpresaConyuge: "",
+  calleEmpresaConyuge: "",
+  numExtIntEmpresaConyuge: "",
+  coloniaEmpresaConyuge: "",
+  alcaldiaEmpresaConyuge: "",
+  cpEmpresaConyuge: "",
+  ciudadPoblacionEmpresaConyuge: "",
+  estadoEmpresaConyuge: "",
+  ingresosConyuge: "",
+  antiguedadEmpresaConyuge: ""
+};
+
 export default function App() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const isConyugeMode = urlParams.get('modo') === 'conyuge' || urlParams.get('conyuge') === 'true';
+  const prefilledRfc = (urlParams.get('rfc') || urlParams.get('rfcAcreditado') || '').toUpperCase().trim();
+  const isAdminMode = urlParams.get('admin') === 'true';
+
+  const targetRowIdFromUrl = urlParams.get('rowId') || urlParams.get('targetRowId');
+  const [submittedRowId, setSubmittedRowId] = useState(null);
+
+  const defaultInitialData = isConyugeMode
+    ? { ...INITIAL_CONYUGE_DATA, rfcAcreditado: prefilledRfc }
+    : INITIAL_FORM_DATA;
+
+  const activeFormFlow = isConyugeMode ? conyugeFormFlow : stellantisFormFlow;
+
   const [currentStep, setCurrentStep] = useState(0); // -1 = Listado, 0 = Bienvenida, 5 = Review, 6 = Éxito
-  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+  const [formData, setFormData] = useState(defaultInitialData);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -77,6 +119,9 @@ export default function App() {
     setSubmitError(null);
 
     const sheetPayload = formPayloadAdapter(formData);
+    if (isConyugeMode && targetRowIdFromUrl) {
+      sheetPayload.targetRowId = targetRowIdFromUrl;
+    }
 
     try {
       let response;
@@ -87,6 +132,9 @@ export default function App() {
       }
 
       if (response && (response.success || response.status === 'success')) {
+        if (response.rowId) {
+          setSubmittedRowId(response.rowId);
+        }
         setCurrentStep(6); // Success
       } else {
         throw new Error(response.error || "Error desconocido al guardar en Sheets");
@@ -99,7 +147,7 @@ export default function App() {
   };
 
   const handleReset = () => {
-    setFormData(INITIAL_FORM_DATA);
+    setFormData(defaultInitialData);
     setErrors({});
     setSubmitError(null);
     setEditingRowId(null);
@@ -116,8 +164,6 @@ export default function App() {
     setSubmitError(null);
     setCurrentStep(5); // Ir directo a revisión para que pueda editar y confirmar de forma interactiva
   };
-
-  const isAdminMode = new URLSearchParams(window.location.search).get('admin') === 'true';
 
   return (
     <div className="app-root-layout">
@@ -170,7 +216,11 @@ export default function App() {
               </>
             )}
             <span className="badge badge-outline">
-              {editingRowId ? `Editando Fila #${editingRowId}` : `Fase ${currentStep > 0 && currentStep <= 4 ? currentStep : "1"}`}
+              {editingRowId 
+                ? `Editando Fila #${editingRowId}` 
+                : isConyugeMode
+                  ? `Coacreditado · Fase ${currentStep > 0 && currentStep <= 2 ? currentStep : "1"}`
+                  : `Fase ${currentStep > 0 && currentStep <= 4 ? currentStep : "1"}`}
             </span>
           </div>
         </div>
@@ -185,7 +235,7 @@ export default function App() {
                 adminPassword={adminPassword}
                 onEditRequest={handleEditRequest}
                 onCreateNew={() => {
-                  setFormData(INITIAL_FORM_DATA);
+                  setFormData(defaultInitialData);
                   setEditingRowId(null);
                   setCurrentStep(0);
                 }}
@@ -209,6 +259,9 @@ export default function App() {
               setFormData={setFormData}
               errors={errors}
               setErrors={setErrors}
+              formFlow={activeFormFlow}
+              fieldSchema={stellantisFieldSchema}
+              isConyugeMode={isConyugeMode}
             />
           )}
 
@@ -220,6 +273,9 @@ export default function App() {
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
               submitError={submitError}
+              formFlow={activeFormFlow}
+              fieldSchema={stellantisFieldSchema}
+              isConyugeMode={isConyugeMode}
             />
           )}
 
@@ -227,6 +283,8 @@ export default function App() {
             <SuccessPage
               formData={formData}
               onReset={handleReset}
+              isConyugeMode={isConyugeMode}
+              submittedRowId={submittedRowId}
             />
           )}
         </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getRequestsFromSheets } from '../services/api/sheetsApi';
 import { formPayloadInverseAdapter } from '../services/adapters/formPayloadInverseAdapter';
-import { Search, Edit2, Plus, RefreshCw, AlertCircle, FileText, Calendar, User } from 'lucide-react';
+import { Search, Edit2, Plus, RefreshCw, AlertCircle, FileText, Calendar, User, Users, Check } from 'lucide-react';
 
 export default function RequestsListPage({ adminPassword, onEditRequest, onCreateNew }) {
   const [requests, setRequests] = useState([]);
@@ -10,6 +10,18 @@ export default function RequestsListPage({ adminPassword, onEditRequest, onCreat
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDate, setFilterDate] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [copiedRfc, setCopiedRfc] = useState(null);
+
+  const handleCopyConyugeLink = (rfc, rowId = null) => {
+    if (!rfc) return;
+    const rowQuery = rowId ? `&rowId=${encodeURIComponent(rowId)}` : '';
+    const link = `${window.location.origin}${window.location.pathname}?modo=conyuge&rfc=${encodeURIComponent(rfc.trim().toUpperCase())}${rowQuery}`;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(link);
+    }
+    setCopiedRfc(rfc);
+    setTimeout(() => setCopiedRfc(null), 2500);
+  };
 
   const fetchRequests = async (showRefreshIndicator = false) => {
     if (showRefreshIndicator) setIsRefreshing(true);
@@ -252,15 +264,42 @@ export default function RequestsListPage({ adminPassword, onEditRequest, onCreat
                         </div>
                       </td>
                       <td className="p-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleEdit(req)}
-                          className="btn btn-secondary flex items-center gap-1 py-1.5 px-3 mx-auto"
-                          style={{ fontSize: '0.8rem' }}
-                        >
-                          <Edit2 size={12} className="text-teal-accent" />
-                          Editar
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleEdit(req)}
+                            className="btn btn-secondary flex items-center gap-1 py-1.5 px-2.5"
+                            style={{ fontSize: '0.8rem' }}
+                            title="Editar esta solicitud"
+                          >
+                            <Edit2 size={12} className="text-teal-accent" />
+                            Editar
+                          </button>
+                          {req["RFC"] && (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyConyugeLink(req["RFC"], req.rowId)}
+                              className="btn btn-secondary flex items-center gap-1 py-1.5 px-2.5"
+                              style={{ 
+                                fontSize: '0.8rem',
+                                borderColor: copiedRfc === req["RFC"] ? '#2dd4bf' : undefined 
+                              }}
+                              title="Copiar enlace para el cónyuge con este RFC prellenado"
+                            >
+                              {copiedRfc === req["RFC"] ? (
+                                <>
+                                  <Check size={12} className="text-teal-accent" />
+                                  <span className="text-teal-accent text-xs">Copiado</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Users size={12} className="text-teal-accent" />
+                                  <span className="text-xs">Cónyuge</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -297,7 +336,7 @@ export default function RequestsListPage({ adminPassword, onEditRequest, onCreat
                     className="glass-panel p-4 flex flex-col gap-3" 
                     style={{ background: 'rgba(255, 255, 255, 0.02)', borderColor: 'rgba(255, 255, 255, 0.05)' }}
                   >
-                    {/* Encabezado de Tarjeta (Fecha, Fila, Botón de Editar) */}
+                    {/* Encabezado de Tarjeta (Fecha, Fila, Botones) */}
                     <div className="flex justify-between items-start border-b pb-2" style={{ borderColor: 'var(--border-color)' }}>
                       <div>
                         <div className="flex items-center gap-1.5 text-xs text-teal-accent font-semibold">
@@ -306,15 +345,36 @@ export default function RequestsListPage({ adminPassword, onEditRequest, onCreat
                         </div>
                         <span className="text-xs text-gray-500 block mt-0.5">Fila #{req.rowId}</span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(req)}
-                        className="btn btn-secondary flex items-center gap-1 py-1 px-2.5"
-                        style={{ fontSize: '0.75rem', height: '30px' }}
-                      >
-                        <Edit2 size={10} className="text-teal-accent" />
-                        Editar
-                      </button>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(req)}
+                          className="btn btn-secondary flex items-center gap-1 py-1 px-2.5"
+                          style={{ fontSize: '0.75rem', height: '30px' }}
+                        >
+                          <Edit2 size={10} className="text-teal-accent" />
+                          Editar
+                        </button>
+                        {req["RFC"] && (
+                          <button
+                            type="button"
+                            onClick={() => handleCopyConyugeLink(req["RFC"], req.rowId)}
+                            className="btn btn-secondary flex items-center gap-1 py-1 px-2"
+                            style={{ 
+                              fontSize: '0.75rem', 
+                              height: '30px',
+                              borderColor: copiedRfc === req["RFC"] ? '#2dd4bf' : undefined 
+                            }}
+                            title="Copiar enlace para cónyuge"
+                          >
+                            {copiedRfc === req["RFC"] ? (
+                              <Check size={11} className="text-teal-accent" />
+                            ) : (
+                              <Users size={11} className="text-teal-accent" />
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* Acreditado */}

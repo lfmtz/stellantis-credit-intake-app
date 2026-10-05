@@ -604,5 +604,291 @@ export const stellantisFieldSchema = {
       required: true,
       message: "La ocupación es obligatoria."
     }
+  },
+
+  // ==========================================
+  // BLOQUE: CÓNYUGE / COTITULAR (Mancomunar Ingresos)
+  // ==========================================
+  rfcAcreditado: {
+    label: "RFC Titular (Puente)",
+    prompt: "¡Hola! Bienvenido al registro de coacreditado/cónyuge de Stellantis Credit. Para enlazar tu información con el expediente de tu pareja, ¿cuál es el RFC con homoclave del solicitante titular?",
+    type: "text",
+    placeholder: "ABCD123456XYZ",
+    phase: 1,
+    sheetHeader: "RFC",
+    validation: {
+      required: true,
+      pattern: /^[A-Z&Ññ]{4}[0-9]{6}[A-Z0-9]{3}$/i,
+      message: "Ese RFC no parece válido. Formato: 4 letras, 6 números y 3 dígitos de homoclave."
+    }
+  },
+  nombreConyuge: {
+    label: "Nombre(s) Cónyuge",
+    prompt: "Para registrar tus datos de manera ordenada, por favor ingresa tu nombre o nombres. ¿Cuál es tu nombre o nombres?",
+    type: "text",
+    placeholder: "Ingresa tu(s) nombre(s)",
+    phase: 1,
+    sheetHeader: "Nombre(s)_conyuge",
+    validation: {
+      required: true,
+      minLength: 2,
+      message: "Por favor, ingresa tu nombre (mínimo 2 letras)."
+    }
+  },
+  apellidoPaternoConyuge: {
+    label: "Apellido Paterno Cónyuge",
+    prompt: "Mucho gusto. Ahora indícame, ¿cuál es tu primer apellido (paterno)?",
+    type: "text",
+    placeholder: "Ingresa tu apellido paterno",
+    phase: 1,
+    sheetHeader: "Apellido_Paterno_conyuge",
+    validation: {
+      required: true,
+      minLength: 2,
+      message: "Tu apellido paterno es requerido."
+    }
+  },
+  apellidoMaternoConyuge: {
+    label: "Apellido Materno Cónyuge",
+    prompt: "¿Y cuál es tu segundo apellido (materno)?",
+    type: "text",
+    placeholder: "Ingresa tu apellido materno",
+    phase: 1,
+    sheetHeader: "Apellido_Materno_conyuge",
+    validation: {
+      required: true,
+      minLength: 2,
+      message: "Tu apellido materno es obligatorio."
+    }
+  },
+  fechaNacimientoConyuge: {
+    label: "Fecha de Nacimiento Cónyuge",
+    prompt: "¿Cuál es tu fecha de nacimiento?",
+    type: "date",
+    placeholder: "",
+    phase: 1,
+    sheetHeader: "Fecha_de_nacimiento_conyuge",
+    validation: {
+      required: true,
+      message: "Necesito tu fecha de nacimiento para continuar."
+    }
+  },
+  nacionalidadConyuge: {
+    label: "Nacionalidad Cónyuge",
+    prompt: "¿Cuál es tu nacionalidad? (ej. MEXICANA)",
+    type: "text",
+    placeholder: "MEXICANA",
+    phase: 1,
+    sheetHeader: "NACIONALIDAD_CONYU",
+    validation: {
+      required: true,
+      minLength: 3,
+      message: "Ingresa tu nacionalidad."
+    }
+  },
+  rfcConyuge: {
+    label: "RFC Cónyuge",
+    prompt: "¿Cuál es tu RFC con homoclave (13 caracteres)?",
+    type: "text",
+    placeholder: "ABCD123456XYZ",
+    phase: 1,
+    sheetHeader: "RFC_CONYUGE",
+    validation: {
+      required: true,
+      pattern: /^[A-Z&Ññ]{4}[0-9]{6}[A-Z0-9]{3}$/i,
+      message: "Ese RFC no parece válido. Recuerda el formato: 4 letras, 6 números y 3 dígitos de homoclave."
+    }
+  },
+  entidadFederativaNacimientoConyuge: {
+    label: "Entidad de Nacimiento Cónyuge",
+    prompt: "¿En qué estado o entidad federativa de la República naciste?",
+    type: "text",
+    placeholder: "Ej. Ciudad de México",
+    phase: 1,
+    sheetHeader: "Entidad_Federativa_de_nacimiento_conyuge",
+    validation: {
+      required: true,
+      message: "La entidad federativa de nacimiento es requerida."
+    }
+  },
+  curpConyuge: {
+    label: "CURP Cónyuge",
+    prompt: "Compártenos tu CURP a 18 posiciones.",
+    type: "text",
+    placeholder: "ABCD123456HXYZW12",
+    phase: 1,
+    sheetHeader: "CURP_CONYUGE",
+    validation: {
+      required: true,
+      pattern: /^[A-Z]{4}[0-9]{6}[H,M][A-Z]{5}[A-Z0-9]{2}$/i,
+      message: "Esa CURP no es válida. Debe tener exactamente 18 caracteres."
+    }
+  },
+  ocupacionConyuge: {
+    label: "Ocupación Cónyuge",
+    prompt: "¿A qué te dedicas o qué puesto desempeñas en tu trabajo?",
+    type: "text",
+    placeholder: "Ej. Gerente de Ventas, Contadora, etc.",
+    phase: 2,
+    sheetHeader: "OCUPACION_CONYUGE",
+    validation: {
+      required: true,
+      minLength: 2,
+      message: "Ingresa tu ocupación o puesto."
+    }
+  },
+  nombreEmpresaConyuge: {
+    label: "Nombre Empresa Cónyuge",
+    prompt: "¿Cuál es el nombre de la empresa, institución o negocio donde laboras?",
+    type: "text",
+    placeholder: "Ej. Grupo Industrial SA",
+    phase: 2,
+    sheetHeader: "NOM_EMPRESA_CONYUGE",
+    validation: {
+      required: true,
+      minLength: 2,
+      message: "Ingresa el nombre de la empresa donde laboras."
+    }
+  },
+  giroEmpresaConyuge: {
+    label: "Giro Empresa Cónyuge",
+    prompt: "¿A qué se dedica la empresa donde laboras o cuál es su giro comercial?",
+    type: "text",
+    placeholder: "Ej. Automotriz / Servicios / Comercio",
+    phase: 2,
+    sheetHeader: "GIRO_EMP_CONYUGE",
+    validation: {
+      required: true,
+      minLength: 2,
+      message: "Ingresa el giro o actividad de la empresa."
+    }
+  },
+  telefonoEmpresaConyuge: {
+    label: "Teléfono Empresa Cónyuge",
+    prompt: "¿Cuál es el número telefónico de tu trabajo (a 10 dígitos, con extensión si aplica)?",
+    type: "text",
+    placeholder: "5512345678 ext 101",
+    phase: 2,
+    sheetHeader: "TEL_EMPRESA_CONYUGE",
+    validation: {
+      required: true,
+      minLength: 8,
+      message: "Ingresa el teléfono de la empresa."
+    }
+  },
+  calleEmpresaConyuge: {
+    label: "Calle Empresa Cónyuge",
+    prompt: "¿En qué calle se ubica tu centro de trabajo (solo el nombre de la calle)?",
+    type: "text",
+    placeholder: "Ej. Insurgentes Sur",
+    phase: 2,
+    sheetHeader: "CALL_EMPRESA_CONYUGE",
+    validation: {
+      required: true,
+      minLength: 2,
+      message: "Ingresa el nombre de la calle de tu trabajo."
+    }
+  },
+  numExtIntEmpresaConyuge: {
+    label: "Núm Ext/Int Empresa Cónyuge",
+    prompt: "¿Cuál es el número exterior de tu trabajo? (Si tienes número interior o piso, puedes agregarlo aquí).",
+    type: "text",
+    placeholder: "Ej. 1234 Int 5B",
+    phase: 2,
+    sheetHeader: "NUM_EXTINT_EM_CONY",
+    validation: {
+      required: true,
+      message: "Ingresa el número exterior de tu trabajo."
+    }
+  },
+  coloniaEmpresaConyuge: {
+    label: "Colonia Empresa Cónyuge",
+    prompt: "¿En qué colonia o fraccionamiento se ubica tu trabajo?",
+    type: "text",
+    placeholder: "Ej. Del Valle",
+    phase: 2,
+    sheetHeader: "COL_EM_CONY",
+    validation: {
+      required: true,
+      minLength: 2,
+      message: "Ingresa la colonia de tu trabajo."
+    }
+  },
+  alcaldiaEmpresaConyuge: {
+    label: "Municipio/Alcaldía Empresa Cónyuge",
+    prompt: "¿A qué municipio o alcaldía pertenece el domicilio de tu empresa?",
+    type: "text",
+    placeholder: "Ej. Benito Juárez",
+    phase: 2,
+    sheetHeader: "ALC_MUN_EMP_CONY",
+    validation: {
+      required: true,
+      minLength: 2,
+      message: "Ingresa el municipio o alcaldía."
+    }
+  },
+  cpEmpresaConyuge: {
+    label: "C.P. Empresa Cónyuge",
+    prompt: "¿Cuál es el Código Postal (C.P.) de tu trabajo?",
+    type: "text",
+    placeholder: "03100",
+    phase: 2,
+    sheetHeader: "CP_EMP_CONYUGE",
+    validation: {
+      required: true,
+      pattern: /^[0-9]{5}$/,
+      message: "El código postal debe tener 5 dígitos."
+    }
+  },
+  ciudadPoblacionEmpresaConyuge: {
+    label: "Ciudad/Población Empresa Cónyuge",
+    prompt: "¿En qué ciudad o población se ubica tu centro de trabajo?",
+    type: "text",
+    placeholder: "Ej. Ciudad de México",
+    phase: 2,
+    sheetHeader: "CIUDAD_POB_EMP_CONYUGE",
+    validation: {
+      required: true,
+      minLength: 2,
+      message: "Ingresa la ciudad o población de tu trabajo."
+    }
+  },
+  estadoEmpresaConyuge: {
+    label: "Estado Empresa Cónyuge",
+    prompt: "¿En qué estado de la República se encuentra tu trabajo?",
+    type: "text",
+    placeholder: "Ej. Ciudad de México",
+    phase: 2,
+    sheetHeader: "ESTADO_EMP_CONYUGE",
+    validation: {
+      required: true,
+      minLength: 2,
+      message: "Ingresa el estado donde laboras."
+    }
+  },
+  ingresosConyuge: {
+    label: "Ingresos Mensuales Cónyuge",
+    prompt: "¿A cuánto ascienden tus ingresos netos mensuales comprobables (en pesos mexicanos)?",
+    type: "text",
+    placeholder: "Ej. 25000",
+    phase: 2,
+    sheetHeader: "INGRESOS_CONYUGE",
+    validation: {
+      required: true,
+      pattern: /^[0-9.,$ ]+$/,
+      message: "Ingresa el monto de tus ingresos netos mensuales."
+    }
+  },
+  antiguedadEmpresaConyuge: {
+    label: "Antigüedad Laboral Cónyuge",
+    prompt: "¿Cuántos años llevas laborando en esta empresa o negocio?",
+    type: "text",
+    placeholder: "Ej. 3",
+    phase: 2,
+    sheetHeader: "ANTIGUEDAD_EMP_CONYUGE",
+    validation: {
+      required: true,
+      message: "Ingresa tus años de antigüedad laboral."
+    }
   }
 };

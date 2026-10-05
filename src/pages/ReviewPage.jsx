@@ -24,7 +24,10 @@ export default function ReviewPage({
   setCurrentStep,
   onSubmit,
   isSubmitting,
-  submitError
+  submitError,
+  formFlow = stellantisFormFlow,
+  fieldSchema = stellantisFieldSchema,
+  isConyugeMode = false
 }) {
   const [editingField, setEditingField] = useState(null);
   const [tempValue, setTempValue] = useState('');
@@ -73,9 +76,9 @@ export default function ReviewPage({
   };
 
   const saveEditing = (fieldId) => {
-    const schema = stellantisFieldSchema[fieldId];
+    const schema = fieldSchema[fieldId];
     let valToSave = tempValue;
-    if (typeof valToSave === "string" && fieldId !== "fechaNacimiento") {
+    if (typeof valToSave === "string" && fieldId !== "fechaNacimiento" && fieldId !== "fechaNacimientoConyuge") {
       valToSave = valToSave.toUpperCase().trim();
     }
     if (schema) {
@@ -93,7 +96,9 @@ export default function ReviewPage({
   return (
     <div className="review-page-container animate-fade-in">
       <div className="review-header">
-        <h1 className="welcome-title text-center">Revisión de tu Solicitud</h1>
+        <h1 className="welcome-title text-center">
+          {isConyugeMode ? "Revisión de Datos del Cónyuge" : "Revisión de tu Solicitud"}
+        </h1>
         
         <div className="review-notice-banner my-5 flex items-start gap-3 p-4 rounded-xl border border-teal-accent/30 bg-teal-accent/5">
           <AlertCircle className="text-teal-accent shrink-0 mt-0.5" size={20} />
@@ -116,8 +121,8 @@ export default function ReviewPage({
       )}
 
       <div className="review-phases-list">
-        {stellantisFormFlow.phases.map((phase) => {
-          if (phase.id === 0 || phase.id === 5) return null; // Saltar bienvenida y revisión
+        {formFlow.phases.map((phase) => {
+          if (phase.id === 0 || !phase.fields || phase.fields.length === 0) return null; // Saltar bienvenida y revisión
 
           return (
             <div key={phase.id} className="phase-review-card glass-panel mb-6">
@@ -133,7 +138,8 @@ export default function ReviewPage({
 
               <div className="phase-card-body grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
                 {phase.fields.map((fieldId) => {
-                  const schema = stellantisFieldSchema[fieldId];
+                  const schema = fieldSchema[fieldId];
+                  if (!schema) return null;
                   const value = formData[fieldId];
                   const isEditing = editingField === fieldId;
                   const error = localErrors[fieldId];
