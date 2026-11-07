@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit2, Check, Send, AlertCircle, Copy, Users } from 'lucide-react';
+import { Edit2, Check, Send, AlertCircle, Copy, Users, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { stellantisFormFlow } from '../flows/stellantis/stellantisFormFlow';
 import { conyugeFormFlow } from '../flows/stellantis/conyugeFormFlow';
 import { stellantisFieldSchema } from '../flows/stellantis/stellantisFieldSchema';
@@ -140,6 +140,33 @@ export default function ReviewPage({
     const v = formData[key];
     return v !== undefined && v !== null && String(v).trim() !== "";
   });
+
+  const [showConyugeSection, setShowConyugeSection] = useState(false);
+  const [copiedConyugeLink, setCopiedConyugeLink] = useState(false);
+  const isConyugeExpanded = hasConyugeData || showConyugeSection;
+
+  const titularRfcValue = (formData.rfc || formData.rfcAcreditado || "").trim().toUpperCase();
+  const conyugeDirectLink = typeof window !== "undefined"
+    ? `${window.location.origin}${window.location.pathname}?modo=conyuge${
+        titularRfcValue ? `&rfc=${encodeURIComponent(titularRfcValue)}` : ""
+      }`
+    : "";
+
+  const handleCopyConyugeLink = () => {
+    if (!conyugeDirectLink) return;
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(conyugeDirectLink);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = conyugeDirectLink;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    setCopiedConyugeLink(true);
+    setTimeout(() => setCopiedConyugeLink(false), 2200);
+  };
 
   const renderFieldCard = (fieldId) => {
     const schema = fieldSchema[fieldId];
@@ -316,18 +343,75 @@ export default function ReviewPage({
           );
         })}
 
-        {/* Si el expediente titular cuenta con datos de Cónyuge / Coacreditado fusionados, mostrarlos también para consulta/copia/edición */}
-        {hasConyugeData && (
+        {/* Bloque de Cónyuge / Coacreditado dentro del expediente titular: permite copiar el link o capturar/editar los datos directamente aquí */}
+        {!isConyugeMode && (
           <div className="phase-review-card glass-panel mb-6">
-            <div className="phase-card-header flex justify-between items-center border-b pb-3">
-              <h3 className="phase-review-title flex items-center gap-2">
-                <Users size={18} className="text-teal-accent" />
-                <span>Datos del Cónyuge / Coacreditado</span>
-              </h3>
+            <div className="phase-card-header flex flex-wrap justify-between items-center gap-3 border-b pb-3">
+              <div>
+                <h3 className="phase-review-title flex items-center gap-2">
+                  <Users size={18} className="text-teal-accent" />
+                  <span>Datos del Cónyuge / Coacreditado</span>
+                </h3>
+                <p className="text-xs text-gray-400 mt-1">
+                  Puedes enviarle el link exclusivo al cónyuge o capturar/editar sus datos directamente aquí.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyConyugeLink}
+                  className="btn btn-secondary btn-sm flex items-center gap-1.5"
+                  title="Copiar enlace exclusivo para que el cónyuge capture sus datos"
+                >
+                  {copiedConyugeLink ? (
+                    <>
+                      <Check size={14} className="text-teal-accent" />
+                      <span className="text-teal-accent">¡Link Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={14} className="text-teal-accent" />
+                      <span>Copiar Link Cónyuge</span>
+                    </>
+                  )}
+                </button>
+                <a
+                  href={conyugeDirectLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary btn-sm flex items-center gap-1.5"
+                  title="Abrir el asistente conversacional del cónyuge en una pestaña nueva"
+                >
+                  <ExternalLink size={14} className="text-teal-accent" />
+                  <span>Abrir Asistente Cónyuge</span>
+                </a>
+                {!hasConyugeData && (
+                  <button
+                    type="button"
+                    onClick={() => setShowConyugeSection((prev) => !prev)}
+                    className="btn btn-primary btn-sm flex items-center gap-1.5"
+                  >
+                    {showConyugeSection ? (
+                      <>
+                        <ChevronUp size={15} />
+                        <span>Ocultar campos</span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown size={15} />
+                        <span>Capturar aquí mismo</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="phase-card-body pt-4">
-              {CONYUGE_FIELDS.map((fieldId) => renderFieldCard(fieldId))}
-            </div>
+
+            {isConyugeExpanded && (
+              <div className="phase-card-body pt-4">
+                {CONYUGE_FIELDS.map((fieldId) => renderFieldCard(fieldId))}
+              </div>
+            )}
           </div>
         )}
       </div>

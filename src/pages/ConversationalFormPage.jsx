@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowRight, ArrowLeft, Send, Sparkles, AlertTriangle, CornerDownLeft, Edit2, CheckCheck, Plus, FileText, Copy, Check, FastForward, Zap } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Send, Sparkles, AlertTriangle, CornerDownLeft, Edit2, CheckCheck, Plus, FileText, Copy, Check, FastForward, Zap, Users } from 'lucide-react';
 import { stellantisFormFlow } from '../flows/stellantis/stellantisFormFlow';
 import { stellantisFieldSchema } from '../flows/stellantis/stellantisFieldSchema';
 import { validateField } from '../utils/validators';
@@ -376,6 +376,38 @@ export default function ConversationalFormPage({
                 className="btn btn-secondary w-full flex items-center justify-center gap-2 py-3"
               >
                 <FileText size={18} /> Ver Solicitudes Guardadas
+              </button>
+              <a
+                href={`${window.location.origin}${window.location.pathname}?modo=conyuge`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-secondary w-full flex items-center justify-center gap-2 py-3"
+                style={{ borderColor: 'rgba(0, 242, 254, 0.35)' }}
+              >
+                <Users size={18} className="text-teal-accent" /> Capturar Cónyuge / Coacreditado
+              </a>
+              <button
+                type="button"
+                onClick={(e) =>
+                  handleCopyText(
+                    e,
+                    `${window.location.origin}${window.location.pathname}?modo=conyuge`,
+                    "adminConyugeLink"
+                  )
+                }
+                className="btn btn-secondary w-full flex items-center justify-center gap-2 py-2.5 text-xs"
+              >
+                {copiedKey === "adminConyugeLink" ? (
+                  <>
+                    <Check size={15} className="text-teal-accent" />
+                    <span className="text-teal-accent">¡Link de Cónyuge Copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={15} className="text-teal-accent" />
+                    <span>Copiar Link General para Cónyuge</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
