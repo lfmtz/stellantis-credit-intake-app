@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Edit2, Check, Send, AlertCircle, Copy } from 'lucide-react';
+import { Edit2, Check, Send, AlertCircle, Copy, Users } from 'lucide-react';
 import { stellantisFormFlow } from '../flows/stellantis/stellantisFormFlow';
+import { conyugeFormFlow } from '../flows/stellantis/conyugeFormFlow';
 import { stellantisFieldSchema } from '../flows/stellantis/stellantisFieldSchema';
 import { validateField } from '../utils/validators';
 
 const formatDisplayValue = (fieldId, value) => {
-  if (!value) return "";
-  if (fieldId === "fechaNacimiento" && typeof value === "string") {
+  if (value === undefined || value === null || value === "") return "";
+  if ((fieldId === "fechaNacimiento" || fieldId === "fechaNacimientoConyuge") && typeof value === "string") {
     const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (match) {
       return `${match[3]}/${match[2]}/${match[1]}`;
@@ -17,6 +18,12 @@ const formatDisplayValue = (fieldId, value) => {
   }
   return String(value).toUpperCase();
 };
+
+// Campos del cónyuge (sin rfcAcreditado que es el mismo RFC del titular)
+const CONYUGE_FIELDS = conyugeFormFlow.phases
+  .filter((p) => p.fields && p.fields.length > 0)
+  .flatMap((p) => p.fields)
+  .filter((f) => f !== "rfcAcreditado");
 
 export default function ReviewPage({
   formData,
@@ -33,9 +40,21 @@ export default function ReviewPage({
   const [tempValue, setTempValue] = useState('');
   const [localErrors, setLocalErrors] = useState({});
   const [copiedField, setCopiedField] = useState(null);
+  const [lastCopiedField, setLastCopiedField] = useState(null);
 
-  const handleCopyField = (fieldId, value) => {
-    if (!value) return;
+  const getFieldValue = (fieldId) => {
+    if (fieldId === "rfc") {
+      return formData.rfc || formData.rfcAcreditado || "";
+    }
+    if (fieldId === "rfcAcreditado") {
+      return formData.rfcAcreditado || formData.rfc || "";
+    }
+    return formData[fieldId];
+  };
+
+  const handleCopyField = (fieldId, value, e) => {
+    if (e) e.stopPropagation();
+    if (value === undefined || value === null || value === "") return;
     const textToCopy = formatDisplayValue(fieldId, value);
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard.writeText(String(textToCopy));
@@ -48,15 +67,17 @@ export default function ReviewPage({
       document.body.removeChild(textarea);
     }
     setCopiedField(fieldId);
+    setLastCopiedField(fieldId);
     setTimeout(() => {
-      setCopiedField(null);
-    }, 1800);
+      setCopiedField((prev) => (prev === fieldId ? null : prev));
+    }, 1500);
   };
 
-  const startEditing = (fieldId, currentVal) => {
+  const startEditing = (fieldId, currentVal, e) => {
+    if (e) e.stopPropagation();
     setEditingField(fieldId);
     let val = currentVal || '';
-    if (fieldId === "fechaNacimiento" && typeof val === "string") {
+    if ((fieldId === "fechaNacimiento" || fieldId === "fechaNacimientoConyuge") && typeof val === "string") {
       const match = val.match(/^(\d{4})-(\d{2})-(\d{2})/);
       if (match) {
         val = `${match[1]}-${match[2]}-${match[3]}`;
@@ -71,11 +92,13 @@ export default function ReviewPage({
     setLocalErrors((prev) => ({ ...prev, [fieldId]: '' }));
   };
 
-  const cancelEditing = () => {
+  const cancelEditing = (e) => {
+    if (e) e.stopPropagation();
     setEditingField(null);
   };
 
-  const saveEditing = (fieldId) => {
+  const saveEditing = (fieldId, e) => {
+    if (e) e.stopPropagation();
     const schema = fieldSchema[fieldId];
     let valToSave = tempValue;
     if (typeof valToSave === "string" && fieldId !== "fechaNacimiento" && fieldId !== "fechaNacimientoConyuge") {
@@ -89,8 +112,157 @@ export default function ReviewPage({
       }
     }
 
-    setFormData((prev) => ({ ...prev, [fieldId]: valToSave }));
+    setFormData((prev) => {
+      const next = { ...prev, [fieldId]: valToSave };
+      if (fieldId === "rfc") {
+        next.rfcAcreditado = valToSave;
+      } else if (fieldId === "rfcAcreditado" && Object.prototype.hasOwnProperty.call(prev, "rfc")) {
+        next.rfc = valToSave;
+      }
+      return next;
+    });
     setEditingField(null);
+  };
+
+  const handleEditKeyDown = (e, fieldId) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      saveEditing(fieldId);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelEditing();
+    }
+  };
+
+  // Detectar si este expediente tiene datos de cónyuge capturados (cuando estamos viendo el expediente titular)
+  const hasConyugeData = !isConyugeMode && CONYUGE_FIELDS.some((key) => {
+    if (key === "nacionalidadConyuge") return false; // Tiene valor por defecto "MEXICANA"
+    const v = formData[key];
+    return v !== undefined && v !== null && String(v).trim() !== "";
+  });
+
+  const renderFieldCard = (fieldId) => {
+    const schema = fieldSchema[fieldId];
+    if (!schema) return null;
+    const value = getFieldValue(fieldId);
+    const hasValue = value !== undefined && value !== null && String(value).trim() !== "";
+    const isEditing = editingField === fieldId;
+    const isCopied = copiedField === fieldId;
+    const isLastCopied = lastCopiedField === fieldId;
+    const error = localErrors[fieldId];
+
+    return (
+      <div
+        key={fieldId}
+        onClick={() => {
+          if (!isEditing && hasValue) {
+            handleCopyField(fieldId, value);
+          }
+        }}
+        className={`review-field-item flex flex-col justify-between rounded-lg border bg-dark-card ${
+          !isEditing && hasValue ? 'review-field-copyable' : ''
+        } ${isCopied ? 'review-field-copied' : isLastCopied ? 'review-field-last-copied' : ''}`}
+        title={!isEditing && hasValue ? "Clic para copiar este dato" : undefined}
+      >
+        <div className="flex justify-between items-center gap-2">
+          <div className="flex items-center gap-2">
+            <span className="review-field-label">{schema.label}</span>
+            {isLastCopied && !isCopied && !isEditing && (
+              <span className="last-copied-pill">Último copiado</span>
+            )}
+          </div>
+          {!isEditing && (
+            <div className="review-field-actions">
+              {hasValue && (
+                <button
+                  type="button"
+                  onClick={(e) => handleCopyField(fieldId, value, e)}
+                  className={`btn-review-action ${isCopied ? 'copied' : ''}`}
+                  title="Copiar este dato al portapapeles"
+                >
+                  {isCopied ? (
+                    <>
+                      <Check size={13} />
+                      <span>¡Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={13} />
+                      <span>Copiar</span>
+                    </>
+                  )}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={(e) => startEditing(fieldId, value, e)}
+                className="btn-review-action edit"
+                title="Editar este campo"
+              >
+                <Edit2 size={13} />
+                <span>Editar</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="review-field-value-container mt-2">
+          {isEditing ? (
+            <div className="flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+              {schema.type === "select" ? (
+                <select
+                  autoFocus
+                  value={tempValue ? tempValue.toUpperCase() : ""}
+                  onChange={(e) => setTempValue(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => handleEditKeyDown(e, fieldId)}
+                  className="form-control"
+                >
+                  <option value="" disabled>{schema.placeholder}</option>
+                  {schema.options.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  autoFocus
+                  type={schema.type}
+                  value={tempValue}
+                  placeholder={schema.placeholder}
+                  onChange={(e) => setTempValue(schema.type === 'date' ? e.target.value : e.target.value.toUpperCase())}
+                  onKeyDown={(e) => handleEditKeyDown(e, fieldId)}
+                  className="form-control"
+                  style={schema.type !== 'date' ? { textTransform: 'uppercase' } : undefined}
+                />
+              )}
+              {error && <span className="error-message">{error}</span>}
+              <div className="flex items-center justify-between gap-2 mt-1">
+                <span className="text-xs text-gray-500">Enter = Guardar · Esc = Cancelar</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={cancelEditing}
+                    className="btn btn-secondary btn-xs"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => saveEditing(fieldId, e)}
+                    className="btn btn-primary btn-xs flex items-center gap-1"
+                  >
+                    <Check size={12} /> Guardar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <span className="review-field-value text-white font-medium">
+              {hasValue ? formatDisplayValue(fieldId, value) : <em className="text-gray-500">Sin responder</em>}
+            </span>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -107,7 +279,7 @@ export default function ReviewPage({
               Valida por favor que tus datos sean correctos, porque de esto depende tu autorización de crédito.
             </p>
             <p className="text-xs text-gray-400 mt-1">
-              Puedes corregir algún dato dando clic en el lápiz (<Edit2 size={12} className="inline mx-0.5 text-teal-accent" />) de tu lado derecho.
+              💡 <strong>Tip rápido:</strong> Haz clic directamente sobre cualquier recuadro para <strong>copiar el dato</strong> con un solo clic, o presiona <strong>Editar</strong> (<Edit2 size={11} className="inline mx-0.5 text-teal-accent" />) para corregirlo (usa <kbd className="enter-key-badge">Enter</kbd> para guardar al instante).
             </p>
           </div>
         </div>
@@ -129,6 +301,7 @@ export default function ReviewPage({
               <div className="phase-card-header flex justify-between items-center border-b pb-3">
                 <h3 className="phase-review-title">Fase {phase.id} — {phase.title}</h3>
                 <button
+                  type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={() => setCurrentStep(phase.id)}
                 >
@@ -136,103 +309,34 @@ export default function ReviewPage({
                 </button>
               </div>
 
-              <div className="phase-card-body grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                {phase.fields.map((fieldId) => {
-                  const schema = fieldSchema[fieldId];
-                  if (!schema) return null;
-                  const value = formData[fieldId];
-                  const isEditing = editingField === fieldId;
-                  const error = localErrors[fieldId];
-
-                  return (
-                    <div key={fieldId} className="review-field-item flex flex-col justify-between p-3 rounded-lg border bg-dark-card">
-                      <div className="flex justify-between items-start">
-                        <span className="review-field-label">{schema.label}</span>
-                        {!isEditing && (
-                          <div className="flex items-center gap-1.5">
-                            {value && (
-                              <button
-                                type="button"
-                                onClick={() => handleCopyField(fieldId, value)}
-                                className="btn-icon-edit"
-                                title="Copiar este dato al portapapeles"
-                              >
-                                {copiedField === fieldId ? (
-                                  <Check size={14} className="text-teal-accent" />
-                                ) : (
-                                  <Copy size={14} />
-                                )}
-                              </button>
-                            )}
-                            <button
-                              onClick={() => startEditing(fieldId, value)}
-                              className="btn-icon-edit"
-                              title="Editar campo"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="review-field-value-container mt-2">
-                        {isEditing ? (
-                          <div className="flex flex-col gap-2">
-                            {schema.type === "select" ? (
-                              <select
-                                value={tempValue ? tempValue.toUpperCase() : ""}
-                                onChange={(e) => setTempValue(e.target.value.toUpperCase())}
-                                className="form-control"
-                              >
-                                <option value="" disabled>{schema.placeholder}</option>
-                                {schema.options.map((opt) => (
-                                  <option key={opt} value={opt}>{opt}</option>
-                                ))}
-                              </select>
-                            ) : (
-                              <input
-                                type={schema.type}
-                                value={tempValue}
-                                onChange={(e) => setTempValue(schema.type === 'date' ? e.target.value : e.target.value.toUpperCase())}
-                                className="form-control"
-                                style={schema.type !== 'date' ? { textTransform: 'uppercase' } : undefined}
-                              />
-                            )}
-                            {error && <span className="error-message">{error}</span>}
-                            <div className="flex gap-2 justify-end">
-                              <button
-                                onClick={cancelEditing}
-                                className="btn btn-secondary btn-xs"
-                              >
-                                Cancelar
-                              </button>
-                              <button
-                                onClick={() => saveEditing(fieldId)}
-                                className="btn btn-primary btn-xs flex items-center gap-1"
-                              >
-                                <Check size={12} /> Guardar
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="review-field-value text-white font-medium">
-                            {value ? formatDisplayValue(fieldId, value) : <em className="text-gray-500">Sin responder</em>}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="phase-card-body pt-4">
+                {phase.fields.map((fieldId) => renderFieldCard(fieldId))}
               </div>
             </div>
           );
         })}
+
+        {/* Si el expediente titular cuenta con datos de Cónyuge / Coacreditado fusionados, mostrarlos también para consulta/copia/edición */}
+        {hasConyugeData && (
+          <div className="phase-review-card glass-panel mb-6">
+            <div className="phase-card-header flex justify-between items-center border-b pb-3">
+              <h3 className="phase-review-title flex items-center gap-2">
+                <Users size={18} className="text-teal-accent" />
+                <span>Datos del Cónyuge / Coacreditado</span>
+              </h3>
+            </div>
+            <div className="phase-card-body pt-4">
+              {CONYUGE_FIELDS.map((fieldId) => renderFieldCard(fieldId))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="submit-actions flex flex-col items-center justify-center mt-8 py-6 border-t gap-4">
         <div className="flex gap-4">
           <button
-            onClick={() => setCurrentStep(4)} // Regresar a Referencias
+            type="button"
+            onClick={() => setCurrentStep(isConyugeMode ? 2 : 4)}
             className="btn btn-secondary btn-large"
             disabled={isSubmitting}
           >
@@ -240,6 +344,7 @@ export default function ReviewPage({
           </button>
           
           <button
+            type="button"
             onClick={onSubmit}
             className="btn btn-primary btn-large flex items-center gap-2"
             disabled={isSubmitting}

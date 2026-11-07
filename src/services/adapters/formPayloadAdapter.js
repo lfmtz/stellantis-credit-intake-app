@@ -8,6 +8,13 @@ export const formPayloadAdapter = (formData) => {
   const payload = {};
 
   Object.keys(formData).forEach((key) => {
+    // Si estamos en el flujo titular/edición donde 'rfc' existe en formData,
+    // evitamos que 'rfcAcreditado' (campo puente de cónyuge que mapea a la misma columna "RFC")
+    // sobreescriba el valor de 'rfc' editado por el usuario.
+    if (key === "rfcAcreditado" && Object.prototype.hasOwnProperty.call(formData, "rfc")) {
+      return;
+    }
+
     const sheetHeader = stellantisSheetMap[key];
     if (sheetHeader) {
       let val = formData[key];

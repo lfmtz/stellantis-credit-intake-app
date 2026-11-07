@@ -49,8 +49,19 @@ export default function ConversationalFormPage({
       initialIndex = allFieldKeys.length - 1;
     }
 
+    // Si el usuario viene de la pantalla de Revisión Final ("Volver a esta sección"),
+    // ubicarnos en la primera pregunta de la fase seleccionada (currentStep)
+    if (currentStep > 0) {
+      const phaseStartIdx = allFieldKeys.findIndex(
+        (key) => fieldSchema[key]?.phase === currentStep
+      );
+      if (phaseStartIdx !== -1) {
+        initialIndex = phaseStartIdx;
+      }
+    }
+
     return {
-      currentPhase: fieldSchema[allFieldKeys[initialIndex]]?.phase || 1,
+      currentPhase: fieldSchema[allFieldKeys[initialIndex]]?.phase || currentStep || 1,
       currentQuestionIndex: initialIndex,
       answers: formData,
       visitedQuestions: visited,
@@ -82,8 +93,8 @@ export default function ConversationalFormPage({
     setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 0);
   };
 
-  // Impedir que el llenado automático salte la bienvenida
-  const [hasStarted, setHasStarted] = useState(false);
+  // Impedir que el llenado automático salte la bienvenida, salvo que vengamos de una fase específica (currentStep > 0)
+  const [hasStarted, setHasStarted] = useState(() => currentStep > 0);
 
   // Estados para la secuencia de bienvenida animada
   const [welcomeParagraphs, setWelcomeParagraphs] = useState([]);
@@ -609,21 +620,36 @@ export default function ConversationalFormPage({
           )}
 
           {/* Banner de retorno rápido si el usuario está consultando/editando una pregunta anterior */}
-          {engineState.currentQuestionIndex < furthestQuestionIndex && (
-            <div className="ai-jump-return-banner animate-fade-in flex items-center justify-between p-2 px-3 rounded-lg mb-3">
+          {(engineState.currentQuestionIndex < furthestQuestionIndex || furthestQuestionIndex >= allFieldKeys.length - 1) && (
+            <div className="ai-jump-return-banner animate-fade-in flex items-center justify-between p-2 px-3 rounded-lg mb-3 flex-wrap gap-2">
               <div className="flex items-center gap-2 text-xs text-gray-300">
                 <span className="text-amber-400 font-bold">📍 Modo consulta:</span>
                 <span>Paso {engineState.currentQuestionIndex + 1} de {allFieldKeys.length}</span>
               </div>
-              <button
-                type="button"
-                onClick={handleJumpToFurthest}
-                className="btn-jump-return"
-                title="Volver al último paso alcanzado"
-              >
-                <FastForward size={14} />
-                <span>Volver a donde me quedé (Paso {furthestQuestionIndex + 1})</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {engineState.currentQuestionIndex < furthestQuestionIndex && furthestQuestionIndex < allFieldKeys.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={handleJumpToFurthest}
+                    className="btn-jump-return"
+                    title="Volver al último paso alcanzado"
+                  >
+                    <FastForward size={14} />
+                    <span>Volver al Paso {furthestQuestionIndex + 1}</span>
+                  </button>
+                )}
+                {furthestQuestionIndex >= allFieldKeys.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(5)}
+                    className="btn-jump-return"
+                    title="Volver directamente a la pantalla de Revisión Final"
+                  >
+                    <FastForward size={14} />
+                    <span>Ir a Revisión Final</span>
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
