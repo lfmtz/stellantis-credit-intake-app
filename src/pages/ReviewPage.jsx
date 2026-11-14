@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit2, Check, Send, AlertCircle, Copy, Users, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { Edit2, Check, Send, AlertCircle, Copy, Users, ExternalLink, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { stellantisFormFlow } from '../flows/stellantis/stellantisFormFlow';
 import { conyugeFormFlow } from '../flows/stellantis/conyugeFormFlow';
 import { stellantisFieldSchema } from '../flows/stellantis/stellantisFieldSchema';
@@ -104,7 +104,12 @@ export default function ReviewPage({
     if (typeof valToSave === "string" && fieldId !== "fechaNacimiento" && fieldId !== "fechaNacimientoConyuge") {
       valToSave = valToSave.toUpperCase().trim();
     }
-    if (schema) {
+    const isClearingOptionalConyugeField =
+      !isConyugeMode &&
+      CONYUGE_FIELDS.includes(fieldId) &&
+      (valToSave === undefined || valToSave === null || String(valToSave).trim() === "");
+
+    if (schema && !isClearingOptionalConyugeField) {
       const errorMsg = validateField(valToSave, schema.validation);
       if (errorMsg) {
         setLocalErrors((prev) => ({ ...prev, [fieldId]: errorMsg }));
@@ -112,6 +117,7 @@ export default function ReviewPage({
       }
     }
 
+    setLocalErrors((prev) => ({ ...prev, [fieldId]: '' }));
     setFormData((prev) => {
       const next = { ...prev, [fieldId]: valToSave };
       if (fieldId === "rfc") {
@@ -141,9 +147,44 @@ export default function ReviewPage({
     return v !== undefined && v !== null && String(v).trim() !== "";
   });
 
+  const hasAnyConyugeValue = !isConyugeMode && (
+    CONYUGE_FIELDS.some((key) => {
+      const v = formData[key];
+      return v !== undefined && v !== null && String(v).trim() !== "";
+    }) || (editingField && CONYUGE_FIELDS.includes(editingField))
+  );
+
   const [showConyugeSection, setShowConyugeSection] = useState(false);
   const [copiedConyugeLink, setCopiedConyugeLink] = useState(false);
+  const [clearedConyugeFeedback, setClearedConyugeFeedback] = useState(false);
   const isConyugeExpanded = hasConyugeData || showConyugeSection;
+
+  const handleClearConyugeData = () => {
+    setFormData((prev) => {
+      const next = { ...prev };
+      CONYUGE_FIELDS.forEach((key) => {
+        next[key] = "";
+      });
+      return next;
+    });
+
+    if (editingField && CONYUGE_FIELDS.includes(editingField)) {
+      setEditingField(null);
+      setTempValue("");
+    }
+
+    setLocalErrors((prev) => {
+      const next = { ...prev };
+      CONYUGE_FIELDS.forEach((key) => {
+        delete next[key];
+      });
+      return next;
+    });
+
+    setShowConyugeSection(true);
+    setClearedConyugeFeedback(true);
+    setTimeout(() => setClearedConyugeFeedback(false), 2500);
+  };
 
   const titularRfcValue = (formData.rfc || formData.rfcAcreditado || "").trim().toUpperCase();
   const conyugeDirectLink = typeof window !== "undefined"
@@ -385,6 +426,30 @@ export default function ReviewPage({
                   <ExternalLink size={14} className="text-teal-accent" />
                   <span>Abrir Asistente Cónyuge</span>
                 </a>
+                {(hasAnyConyugeValue || clearedConyugeFeedback) && (
+                  <button
+                    type="button"
+                    onClick={handleClearConyugeData}
+                    className="btn btn-secondary btn-sm flex items-center gap-1.5"
+                    style={{
+                      borderColor: clearedConyugeFeedback ? '#2dd4bf' : 'rgba(239, 68, 68, 0.35)',
+                      color: clearedConyugeFeedback ? '#2dd4bf' : '#fca5a5'
+                    }}
+                    title="Limpiar todos los campos de la sección del cónyuge"
+                  >
+                    {clearedConyugeFeedback ? (
+                      <>
+                        <Check size={14} className="text-teal-accent" />
+                        <span>¡Datos limpiados!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 size={14} />
+                        <span>Limpiar datos cónyuge</span>
+                      </>
+                    )}
+                  </button>
+                )}
                 {!hasConyugeData && (
                   <button
                     type="button"
