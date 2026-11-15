@@ -276,6 +276,8 @@ export default function App() {
               formFlow={activeFormFlow}
               fieldSchema={stellantisFieldSchema}
               isConyugeMode={isConyugeMode}
+              editingRowId={editingRowId}
+              adminPassword={adminPassword}
             />
           )}
 

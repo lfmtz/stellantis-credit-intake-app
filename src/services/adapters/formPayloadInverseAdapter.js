@@ -1,11 +1,19 @@
 import { stellantisFieldSchema } from "../../flows/stellantis/stellantisFieldSchema.js";
 
-// Normaliza texto quitando espacios extra y pasando a minúsculas (con y sin acentos)
-const normalizeExact = (str) => String(str || "").normalize("NFC").trim().toLowerCase();
+// Normaliza texto quitando espacios extra, igualando guiones bajos a espacios y pasando a minúsculas (con y sin acentos)
+const normalizeExact = (str) =>
+  String(str || "")
+    .normalize("NFC")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 const normalizeNoAccents = (str) =>
   String(str || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
 

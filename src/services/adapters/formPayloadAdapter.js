@@ -34,6 +34,14 @@ export const formPayloadAdapter = (formData) => {
       }
       
       payload[sheetHeader] = val;
+
+      // Si es un cabecero de cónyuge con guiones bajos (ej. "Nombre(s)_conyuge"),
+      // enviamos también la variante con espacios ("Nombre(s) conyuge") para que en Google Sheets
+      // se actualicen o limpien ambas columnas si existen en la hoja.
+      if (sheetHeader.includes("_")) {
+        const spaceHeader = sheetHeader.replace(/_/g, " ");
+        payload[spaceHeader] = val;
+      }
     }
   });
 

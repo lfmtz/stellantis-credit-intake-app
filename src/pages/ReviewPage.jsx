@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Edit2, Check, Send, AlertCircle, Copy, Users, ExternalLink, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Edit2, Check, Send, AlertCircle, Copy, Users, ExternalLink, ChevronDown, ChevronUp, Trash2, RefreshCw } from 'lucide-react';
 import { stellantisFormFlow } from '../flows/stellantis/stellantisFormFlow';
 import { conyugeFormFlow } from '../flows/stellantis/conyugeFormFlow';
 import { stellantisFieldSchema } from '../flows/stellantis/stellantisFieldSchema';
 import { validateField } from '../utils/validators';
+import { updateFormInSheets } from '../services/api/sheetsApi';
 
 const formatDisplayValue = (fieldId, value) => {
   if (value === undefined || value === null || value === "") return "";
@@ -34,7 +35,9 @@ export default function ReviewPage({
   submitError,
   formFlow = stellantisFormFlow,
   fieldSchema = stellantisFieldSchema,
-  isConyugeMode = false
+  isConyugeMode = false,
+  editingRowId = null,
+  adminPassword = ''
 }) {
   const [editingField, setEditingField] = useState(null);
   const [tempValue, setTempValue] = useState('');
@@ -157,9 +160,10 @@ export default function ReviewPage({
   const [showConyugeSection, setShowConyugeSection] = useState(false);
   const [copiedConyugeLink, setCopiedConyugeLink] = useState(false);
   const [clearedConyugeFeedback, setClearedConyugeFeedback] = useState(false);
+  const [isClearingConyugeInSheets, setIsClearingConyugeInSheets] = useState(false);
   const isConyugeExpanded = hasConyugeData || showConyugeSection;
 
-  const handleClearConyugeData = () => {
+  const handleClearConyugeData = async () => {
     setFormData((prev) => {
       const next = { ...prev };
       CONYUGE_FIELDS.forEach((key) => {
@@ -182,8 +186,32 @@ export default function ReviewPage({
     });
 
     setShowConyugeSection(true);
+
+    // Si estamos editando un registro existente en Google Sheets, borramos de inmediato las celdas de cónyuge en Sheets
+    // (tanto con guiones bajos como con espacios)
+    if (editingRowId) {
+      setIsClearingConyugeInSheets(true);
+      try {
+        const clearPayload = {};
+        CONYUGE_FIELDS.forEach((key) => {
+          const header = fieldSchema[key]?.sheetHeader;
+          if (header) {
+            clearPayload[header] = "";
+            if (header.includes("_")) {
+              clearPayload[header.replace(/_/g, " ")] = "";
+            }
+          }
+        });
+        await updateFormInSheets(editingRowId, clearPayload, adminPassword);
+      } catch (err) {
+        console.error("Error al limpiar datos de cónyuge en Google Sheets:", err);
+      } finally {
+        setIsClearingConyugeInSheets(false);
+      }
+    }
+
     setClearedConyugeFeedback(true);
-    setTimeout(() => setClearedConyugeFeedback(false), 2500);
+    setTimeout(() => setClearedConyugeFeedback(false), 3000);
   };
 
   const titularRfcValue = (formData.rfc || formData.rfcAcreditado || "").trim().toUpperCase();
@@ -426,10 +454,11 @@ export default function ReviewPage({
                   <ExternalLink size={14} className="text-teal-accent" />
                   <span>Abrir Asistente Cónyuge</span>
                 </a>
-                {(hasAnyConyugeValue || clearedConyugeFeedback) && (
+                {(hasAnyConyugeValue || clearedConyugeFeedback || isClearingConyugeInSheets) && (
                   <button
                     type="button"
                     onClick={handleClearConyugeData}
+                    disabled={isClearingConyugeInSheets}
                     className="btn btn-secondary btn-sm flex items-center gap-1.5"
                     style={{
                       borderColor: clearedConyugeFeedback ? '#2dd4bf' : 'rgba(239, 68, 68, 0.35)',
@@ -437,7 +466,12 @@ export default function ReviewPage({
                     }}
                     title="Limpiar todos los campos de la sección del cónyuge"
                   >
-                    {clearedConyugeFeedback ? (
+                    {isClearingConyugeInSheets ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin text-teal-accent" />
+                        <span>Borrando en Sheets...</span>
+                      </>
+                    ) : clearedConyugeFeedback ? (
                       <>
                         <Check size={14} className="text-teal-accent" />
                         <span>¡Datos limpiados!</span>
